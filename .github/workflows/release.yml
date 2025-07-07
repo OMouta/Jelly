@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch:  # Allow manual triggering
 
+permissions:
+  contents: write  # Required to upload release assets
+
 jobs:
   release:
     runs-on: ubuntu-latest

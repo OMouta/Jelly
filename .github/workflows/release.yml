@@ -35,45 +35,65 @@ jobs:
         # List what files were actually created
         ls -la binaries/
         
-        # Rename binaries to match Aftman expected format
+        # Get version from tag (remove 'v' prefix)
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "Version: $VERSION"
+        
+        # Rename and zip binaries to match Aftman expected format
         cd binaries
         
-        # Handle different possible naming patterns
+        # Handle Linux binary
         if [ -f "jelly-linux" ]; then
-          mv jelly-linux jelly-linux-x86_64
-        elif [ -f "jelly" ]; then
-          cp jelly jelly-linux-x86_64
+          mv jelly-linux jelly
+        fi
+        if [ -f "jelly" ]; then
+          zip "jelly-${VERSION}-linux-x86_64.zip" jelly
+          rm jelly
         fi
         
+        # Handle Windows binary
         if [ -f "jelly-win.exe" ]; then
-          mv jelly-win.exe jelly-windows-x86_64.exe
+          mv jelly-win.exe jelly.exe
         elif [ -f "jelly.exe" ]; then
-          cp jelly.exe jelly-windows-x86_64.exe
+          true  # already named correctly
+        fi
+        if [ -f "jelly.exe" ]; then
+          zip "jelly-${VERSION}-windows-x86_64.zip" jelly.exe
+          rm jelly.exe
         fi
         
+        # Handle macOS binary
         if [ -f "jelly-macos" ]; then
-          mv jelly-macos jelly-macos-x86_64
-        elif [ -f "jelly" ]; then
-          cp jelly jelly-macos-x86_64
+          mv jelly-macos jelly
+        fi
+        if [ -f "jelly" ]; then
+          zip "jelly-${VERSION}-macos-x86_64.zip" jelly
+          rm jelly
         fi
         
         # List final files
         ls -la
         
         # Create checksums for Aftman
-        sha256sum jelly-linux-x86_64 > jelly-linux-x86_64.sha256 2>/dev/null || true
-        sha256sum jelly-windows-x86_64.exe > jelly-windows-x86_64.exe.sha256 2>/dev/null || true
-        sha256sum jelly-macos-x86_64 > jelly-macos-x86_64.sha256 2>/dev/null || true
+        for file in *.zip; do
+          if [ -f "$file" ]; then
+            sha256sum "$file" > "${file}.sha256"
+          fi
+        done
     
     - name: Upload Release Assets
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          binaries/jelly-linux-x86_64
-          binaries/jelly-linux-x86_64.sha256
-          binaries/jelly-windows-x86_64.exe
-          binaries/jelly-windows-x86_64.exe.sha256
-          binaries/jelly-macos-x86_64
-          binaries/jelly-macos-x86_64.sha256
+      run: |
+        # Get version from tag
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        # Upload all zip files and their checksums
+        gh release upload ${{ github.event.release.tag_name }} \
+          binaries/jelly-${VERSION}-linux-x86_64.zip \
+          binaries/jelly-${VERSION}-linux-x86_64.zip.sha256 \
+          binaries/jelly-${VERSION}-windows-x86_64.zip \
+          binaries/jelly-${VERSION}-windows-x86_64.zip.sha256 \
+          binaries/jelly-${VERSION}-macos-x86_64.zip \
+          binaries/jelly-${VERSION}-macos-x86_64.zip.sha256 \
+          --clobber
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

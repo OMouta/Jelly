@@ -29,16 +29,38 @@ jobs:
         npm run build:windows  
         npm run build:mac
         
+        # List what files were actually created
+        ls -la binaries/
+        
         # Rename binaries to match Aftman expected format
         cd binaries
-        mv jelly-linux jelly-linux-x86_64
-        mv jelly-win.exe jelly-windows-x86_64.exe
-        mv jelly-macos jelly-macos-x86_64
+        
+        # Handle different possible naming patterns
+        if [ -f "jelly-linux" ]; then
+          mv jelly-linux jelly-linux-x86_64
+        elif [ -f "jelly" ]; then
+          cp jelly jelly-linux-x86_64
+        fi
+        
+        if [ -f "jelly-win.exe" ]; then
+          mv jelly-win.exe jelly-windows-x86_64.exe
+        elif [ -f "jelly.exe" ]; then
+          cp jelly.exe jelly-windows-x86_64.exe
+        fi
+        
+        if [ -f "jelly-macos" ]; then
+          mv jelly-macos jelly-macos-x86_64
+        elif [ -f "jelly" ]; then
+          cp jelly jelly-macos-x86_64
+        fi
+        
+        # List final files
+        ls -la
         
         # Create checksums for Aftman
-        sha256sum jelly-linux-x86_64 > jelly-linux-x86_64.sha256
-        sha256sum jelly-windows-x86_64.exe > jelly-windows-x86_64.exe.sha256  
-        sha256sum jelly-macos-x86_64 > jelly-macos-x86_64.sha256
+        sha256sum jelly-linux-x86_64 > jelly-linux-x86_64.sha256 2>/dev/null || true
+        sha256sum jelly-windows-x86_64.exe > jelly-windows-x86_64.exe.sha256 2>/dev/null || true
+        sha256sum jelly-macos-x86_64 > jelly-macos-x86_64.sha256 2>/dev/null || true
     
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1

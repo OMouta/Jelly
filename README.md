@@ -243,6 +243,23 @@ Search for packages in the Wally registry.
 
 Show detailed information about a package.
 
+### `jelly outdated`
+
+Check for outdated packages and show which ones can be updated.
+
+### `jelly update [packages...]`
+
+Update packages to their latest compatible versions.
+
+**Options:**
+
+- If no packages specified, updates all outdated packages
+- Specify package names to update only those packages
+
+### `jelly clean`
+
+Clean up the Packages directory by removing unused dependencies and clearing cache.
+
 ## Package Name Format
 
 Jelly uses the same package naming convention as Wally:

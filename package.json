@@ -42,7 +42,10 @@
       "node18-win-x64",
       "node18-macos-x64"
     ],
-    "outputPath": "binaries"
+    "outputPath": "binaries",
+    "assets": [
+      "node_modules/figlet/fonts/**/*"
+    ]
   },
   "dependencies": {
     "@types/figlet": "^1.7.0",

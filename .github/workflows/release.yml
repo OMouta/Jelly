@@ -28,47 +28,50 @@ jobs:
     
     - name: Build binaries
       run: |
-        npm run build:linux
-        npm run build:windows  
-        npm run build:mac
-        
-        # List what files were actually created
-        ls -la binaries/
-        
         # Get version from tag (remove 'v' prefix)
         VERSION=${GITHUB_REF#refs/tags/v}
         echo "Version: $VERSION"
         
-        # Rename and zip binaries to match Aftman expected format
+        # Build each platform separately and rename immediately to avoid conflicts
+        
+        # Build Linux
+        npm run build:linux
+        cd binaries
+        mv jelly jelly-linux
+        cd ..
+        
+        # Build Windows  
+        npm run build:windows
+        # Windows creates jelly.exe, no need to rename yet
+        
+        # Build macOS
+        npm run build:mac
+        cd binaries
+        mv jelly jelly-macos  # Rename immediately to avoid overwriting Linux
+        cd ..
+        
+        # List what we have
+        ls -la binaries/
+        
+        # Now zip everything with proper names
         cd binaries
         
-        # Handle Linux binary
+        # Zip Linux binary
         if [ -f "jelly-linux" ]; then
-          mv jelly-linux jelly
-        fi
-        if [ -f "jelly" ]; then
-          zip "jelly-${VERSION}-linux-x86_64.zip" jelly
-          rm jelly
+          zip "jelly-${VERSION}-linux-x86_64.zip" jelly-linux
+          rm jelly-linux
         fi
         
-        # Handle Windows binary
-        if [ -f "jelly-win.exe" ]; then
-          mv jelly-win.exe jelly.exe
-        elif [ -f "jelly.exe" ]; then
-          true  # already named correctly
-        fi
+        # Zip Windows binary
         if [ -f "jelly.exe" ]; then
           zip "jelly-${VERSION}-windows-x86_64.zip" jelly.exe
           rm jelly.exe
         fi
         
-        # Handle macOS binary
+        # Zip macOS binary
         if [ -f "jelly-macos" ]; then
-          mv jelly-macos jelly
-        fi
-        if [ -f "jelly" ]; then
-          zip "jelly-${VERSION}-macos-x86_64.zip" jelly
-          rm jelly
+          zip "jelly-${VERSION}-macos-x86_64.zip" jelly-macos
+          rm jelly-macos
         fi
         
         # List final files

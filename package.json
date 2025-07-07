@@ -44,7 +44,7 @@
     ],
     "outputPath": "binaries",
     "assets": [
-      "node_modules/figlet/fonts/**/*"
+      "node_modules/figlet/fonts/Standard.flf"
     ]
   },
   "dependencies": {

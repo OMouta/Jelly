@@ -20,8 +20,9 @@ A modern package manager for Roblox, built on top of Wally. Jelly provides a str
 
 Add Jelly to your `aftman.toml`:
 
-```bash
-aftman add OMouta/Jelly
+```toml
+[tools]
+jelly = "OMouta/jelly@0.2.0"
 ```
 
 Then install:

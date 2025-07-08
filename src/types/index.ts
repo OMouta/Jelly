@@ -71,3 +71,20 @@ export interface InstallOptions {
 export interface InitOptions {
   name?: string;
 }
+
+export interface LockfileEntry {
+  version: string;
+  resolved: string;
+  integrity?: string;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}
+
+export interface JellyLockfile {
+  lockfileVersion: number;
+  name: string;
+  version: string;
+  packages: Record<string, LockfileEntry>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}

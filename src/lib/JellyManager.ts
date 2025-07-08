@@ -3,21 +3,25 @@ import ora from 'ora';
 import { ProjectManager } from './ProjectManager';
 import { WallyAPI } from './WallyAPI';
 import { PackageDownloader } from './PackageDownloader';
+import { LockfileManager } from './LockfileManager';
 import { InstallOptions, InitOptions } from '../types';
 
 export class JellyManager {
   private projectManager: ProjectManager;
   private packageDownloader: PackageDownloader;
+  private lockfileManager: LockfileManager;
 
   constructor(projectPath?: string) {
     this.projectManager = new ProjectManager(projectPath);
     this.packageDownloader = new PackageDownloader(projectPath);
+    this.lockfileManager = new LockfileManager(projectPath);
   }
 
   async install(packages: string[], options: InstallOptions = {}): Promise<void> {
     const spinner = ora('Installing packages...').start();
 
     try {
+      // Update jelly.json with new packages
       for (const packageName of packages) {
         const parsed = WallyAPI.parsePackageName(packageName);
         let version = parsed.version;
@@ -33,9 +37,20 @@ export class JellyManager {
           version,
           options.dev || false
         );
+      }
 
-        spinner.text = `Downloading ${parsed.scope}/${parsed.name}@${version}...`;
-        await this.packageDownloader.downloadPackage(parsed.scope, parsed.name, version);
+      // Read updated config and update/generate lockfile
+      const config = await this.projectManager.readJellyConfig();
+      spinner.text = 'Updating lockfile...';
+      const lockfile = await this.lockfileManager.updateLockfile(config);
+      await this.lockfileManager.writeLockfile(lockfile);
+
+      // Download packages from lockfile
+      spinner.text = 'Downloading packages...';
+      for (const [packageName, lockfileEntry] of Object.entries(lockfile.packages)) {
+        const parsed = WallyAPI.parsePackageName(packageName);
+        spinner.text = `Downloading ${packageName}@${lockfileEntry.version}...`;
+        await this.packageDownloader.downloadFromLockfile(lockfileEntry, parsed.scope, parsed.name);
       }
 
       // Generate package index and update project file
@@ -45,6 +60,7 @@ export class JellyManager {
 
       spinner.succeed('Packages installed successfully!');
       console.log(chalk.blue(`📁 Packages installed to: ${this.packageDownloader.getPackagesPath()}`));
+      console.log(chalk.green(`📋 Lockfile updated: ${this.lockfileManager.getLockfilePath()}`));
       
       // Show outdated packages summary
       await this.showOutdatedSummary();
@@ -74,18 +90,35 @@ export class JellyManager {
         return;
       }
 
-      spinner.text = `Installing ${Object.keys(allDeps).length} dependencies...`;
+      // Check if lockfile exists and is valid
+      const lockfileExists = await this.lockfileManager.lockfileExists();
+      const lockfileValid = lockfileExists ? await this.lockfileManager.validateLockfile(config) : false;
 
-      // Download and install each package
-      for (const [packageName, version] of Object.entries(allDeps)) {
+      if (!lockfileExists || !lockfileValid) {
+        spinner.text = 'Generating lockfile...';
+        const lockfile = await this.lockfileManager.generateLockfile(config);
+        await this.lockfileManager.writeLockfile(lockfile);
+        console.log(chalk.green('📋 Generated jelly-lock.json'));
+      }
+
+      // Read lockfile and install packages
+      const lockfile = await this.lockfileManager.readLockfile();
+      if (!lockfile) {
+        throw new Error('Failed to read lockfile');
+      }
+
+      spinner.text = `Installing ${Object.keys(lockfile.packages).length} packages...`;
+
+      // Download and install each package from lockfile
+      for (const [packageName, lockfileEntry] of Object.entries(lockfile.packages)) {
         const parsed = WallyAPI.parsePackageName(packageName);
-        spinner.text = `Downloading ${packageName}@${version}...`;
+        spinner.text = `Downloading ${packageName}@${lockfileEntry.version}...`;
         
         try {
-          await this.packageDownloader.downloadPackage(parsed.scope, parsed.name, version);
+          await this.packageDownloader.downloadFromLockfile(lockfileEntry, parsed.scope, parsed.name);
         } catch (error) {
           // If package download fails, log but continue with other packages
-          spinner.text = `⚠ Could not download ${packageName}@${version} (${(error as Error).message})`;
+          spinner.text = `⚠ Could not download ${packageName}@${lockfileEntry.version} (${(error as Error).message})`;
           await new Promise(resolve => setTimeout(resolve, 1500)); // Brief pause to show message
         }
       }
@@ -95,8 +128,9 @@ export class JellyManager {
       await this.packageDownloader.generatePackageIndex();
       await this.packageDownloader.updateProjectFile(this.projectManager);
 
-      spinner.succeed(`Successfully installed ${Object.keys(allDeps).length} dependencies!`);
+      spinner.succeed(`Successfully installed ${Object.keys(lockfile.packages).length} packages!`);
       console.log(chalk.blue(`📁 Packages installed to: ${this.packageDownloader.getPackagesPath()}`));
+      console.log(chalk.green(`📋 Using lockfile: ${this.lockfileManager.getLockfilePath()}`));
       
       // Show outdated packages summary
       await this.showOutdatedSummary();
@@ -122,7 +156,14 @@ export class JellyManager {
         await this.projectManager.removeDependency(fullName);
       }
 
+      // Update lockfile after removing packages
+      const config = await this.projectManager.readJellyConfig();
+      spinner.text = 'Updating lockfile...';
+      const lockfile = await this.lockfileManager.updateLockfile(config);
+      await this.lockfileManager.writeLockfile(lockfile);
+
       spinner.succeed('Packages removed successfully!');
+      console.log(chalk.green(`📋 Lockfile updated: ${this.lockfileManager.getLockfilePath()}`));
     } catch (error) {
       spinner.fail('Removal failed');
       throw error;
@@ -597,6 +638,63 @@ export class JellyManager {
       console.log(chalk.gray(`Removed cache directory: ${cacheDir}`));
     } catch (error) {
       spinner.fail('Cache clean failed');
+      throw error;
+    }
+  }
+
+  async verifyLockfile(): Promise<void> {
+    const spinner = ora('Verifying lockfile...').start();
+
+    try {
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return;
+      }
+
+      if (!(await this.lockfileManager.lockfileExists())) {
+        spinner.fail('No jelly-lock.json found. Run "jelly install" to generate one.');
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
+      const isValid = await this.lockfileManager.validateLockfile(config);
+
+      if (isValid) {
+        spinner.succeed('Lockfile is valid and up to date!');
+        console.log(chalk.green(`📋 ${this.lockfileManager.getLockfilePath()}`));
+      } else {
+        spinner.fail('Lockfile is outdated or invalid.');
+        console.log(chalk.yellow('Run "jelly install" to update the lockfile.'));
+      }
+    } catch (error) {
+      spinner.fail('Lockfile verification failed');
+      throw error;
+    }
+  }
+
+  async regenerateLockfile(): Promise<void> {
+    const spinner = ora('Regenerating lockfile...').start();
+
+    try {
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
+      
+      // Delete existing lockfile
+      await this.lockfileManager.deleteLockfile();
+      
+      // Generate new lockfile
+      const lockfile = await this.lockfileManager.generateLockfile(config);
+      await this.lockfileManager.writeLockfile(lockfile);
+
+      spinner.succeed('Lockfile regenerated successfully!');
+      console.log(chalk.green(`📋 Created new lockfile: ${this.lockfileManager.getLockfilePath()}`));
+      console.log(chalk.blue(`📦 Resolved ${Object.keys(lockfile.packages).length} packages`));
+    } catch (error) {
+      spinner.fail('Lockfile regeneration failed');
       throw error;
     }
   }

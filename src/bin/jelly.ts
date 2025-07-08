@@ -287,4 +287,28 @@ program
     }
   });
 
+program
+  .command('lockfile')
+  .description('Manage lockfile')
+  .option('--verify', 'Verify lockfile integrity')
+  .option('--regenerate', 'Regenerate lockfile from jelly.json')
+  .action(async (options) => {
+    const jelly = new JellyManager();
+    try {
+      if (options.verify) {
+        console.log(chalk.cyan('🪼 ') + chalk.bold('Verifying lockfile...'));
+        await jelly.verifyLockfile();
+      } else if (options.regenerate) {
+        console.log(chalk.cyan('🪼 ') + chalk.bold('Regenerating lockfile...'));
+        await jelly.regenerateLockfile();
+      } else {
+        console.log(chalk.yellow('Please specify --verify or --regenerate'));
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('💥 Lockfile operation failed:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);

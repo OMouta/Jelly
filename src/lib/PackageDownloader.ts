@@ -1,6 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { WallyAPI } from './WallyAPI';
+import { LockfileEntry } from '../types';
 
 export interface PackageDownloadInfo {
   scope: string;
@@ -58,6 +59,47 @@ export class PackageDownloader {
       console.log(`\n🪼 Downloaded and extracted ${scope}/${name}@${version}`);
     } catch (error) {
       throw new Error(`Failed to download ${scope}/${name}@${version}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async downloadFromLockfile(lockfileEntry: LockfileEntry, scope: string, name: string): Promise<void> {
+    try {
+      // Create packages directory structure
+      await fs.ensureDir(this.packagesDir);
+      
+      const packageDir = path.join(this.packagesDir, `${scope}_${name}`);
+      await fs.ensureDir(packageDir);
+
+      // Download the package ZIP from the resolved URL
+      const response = await fetch(lockfileEntry.resolved, {
+        headers: {
+          'User-Agent': 'jelly-cli/0.0.1',
+          'Accept': 'application/zip',
+          'Wally-Version': '0.3.2'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to download package: ${response.status} ${response.statusText}`);
+      }
+
+      const zipPath = path.join(packageDir, `${name}.zip`);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      await fs.writeFile(zipPath, buffer);
+
+      // Extract the ZIP file
+      await this.extractPackage(zipPath, packageDir);
+      
+      // Process the extracted package (clean up and find main module)
+      await this.processExtractedPackage(packageDir, scope, name);
+      
+      // Clean up the ZIP file
+      await fs.remove(zipPath);
+
+      console.log(`\n🪼 Downloaded and extracted ${scope}/${name}@${lockfileEntry.version} (from lockfile)`);
+    } catch (error) {
+      throw new Error(`Failed to download ${scope}/${name}@${lockfileEntry.version}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

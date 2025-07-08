@@ -7,6 +7,7 @@ A modern package manager for Roblox, built on top of Wally. Jelly provides a str
 ## Features
 
 - 📦 **Clean JSON Configuration**: Manage dependencies in a familiar `jelly.json` format
+- 🔒 **Lockfile Support**: Reproducible installs with `jelly-lock.json` (like package-lock.json)
 - 🧹 **Smart Package Cleanup**: Automatically removes unnecessary files (docs, tests, README) and optimizes package structure
 - 💡 **Intelligent Module Resolution**: Handles messy package structures and fixes require paths automatically
 - 🔍 **Enhanced Package Search**: Search the Wally registry with customizable result limits
@@ -117,6 +118,7 @@ Jelly uses a separate `jelly.json` file alongside your `default.project.json` to
 my-project/
 ├── default.project.json   
 ├── jelly.json             # Jelly dependencies
+├── jelly-lock.json        # Lockfile for reproducible installs
 ├── Packages/              # Your packages
 └── src/
 ```
@@ -296,6 +298,43 @@ Run a script defined in jelly.json.
 - `jelly run build --output game.rbxl` - Run build script with arguments
 - `jelly run serve` - Run the serve script
 
+### `jelly lockfile [options]`
+
+Manage the lockfile for reproducible installs.
+
+**Options:**
+
+- `--verify`: Verify lockfile integrity against jelly.json
+- `--regenerate`: Regenerate lockfile from jelly.json
+
+## Lockfile Support 🔒
+
+Jelly uses a `jelly-lock.json` file to ensure reproducible installs across different environments. This file:
+
+- **Locks exact versions** of all dependencies and their sub-dependencies
+- **Stores resolved URLs** for faster downloads
+- **Prevents version drift** between different machines/CI environments
+- **Ensures consistent builds** for your team
+
+### How lockfiles work
+
+1. **First install**: Jelly generates `jelly-lock.json` based on your `jelly.json`
+2. **Subsequent installs**: Jelly uses the lockfile to install exact versions
+3. **Adding packages**: The lockfile is automatically updated
+4. **Removing packages**: The lockfile is regenerated to remove unused entries
+
+### Lockfile commands
+
+```bash
+# Verify lockfile is up to date
+jelly lockfile --verify
+
+# Regenerate lockfile (useful after manual jelly.json edits)
+jelly lockfile --regenerate
+```
+
+**Note**: Like npm's `package-lock.json`, you should commit `jelly-lock.json` to version control to ensure your team gets identical dependency versions.
+
 ## Package Name Format
 
 Jelly uses the same package naming convention as Wally:
@@ -336,12 +375,14 @@ jelly remove roblox/roact
 | Feature | Wally | Jelly |
 |---------|-------|-------|
 | Configuration | Separate `wally.toml` | Separate `jelly.json` |
+| Lockfile Support | None | `jelly-lock.json` for reproducible installs |
 | Package Cleanup | Downloads entire repos | Smart cleanup, removes bloat |
 | Package Registry | Wally Registry | Same Wally Registry |
 | Package Format | Same | Same |
 | CLI Interface | Basic | Enhanced with search limits |
 | Space Efficiency | Downloads everything | pnpm-like optimization |
 | Rojo Integration | Requires manual setup | Keeps project.json clean |
+| Reproducible Installs | No | Yes, via lockfile |
 
 ## Why JavaScript?
 

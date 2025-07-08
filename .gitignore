@@ -42,3 +42,6 @@ coverage/
 # Demo projects (for testing)
 demo-project/
 test-projects/
+
+# Lockfiles (uncomment to exclude from version control)
+# jelly-lock.json

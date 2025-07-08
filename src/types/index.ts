@@ -2,11 +2,23 @@ export interface RojoProject {
   name: string;
   version?: string;
   description?: string;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
   tree: {
     $className: string;
     [key: string]: any;
+  };
+}
+
+export interface JellyConfig {
+  name: string;
+  version: string;
+  description?: string;
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+  scripts?: Record<string, string>;
+  jelly?: {
+    cleanup?: boolean;
+    optimize?: boolean;
+    packagesPath?: string;
   };
 }
 

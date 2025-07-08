@@ -1,17 +1,16 @@
 # Jelly 🪼
 
-> ⚠️ **Beta Release**: Jelly is currently in beta (v0.1.0). While functional, expect some rough edges and breaking changes. Feedback and contributions welcome!
+> ⚠️ **Beta Release**: Jelly is currently in beta (v0.2.0). While functional, expect some rough edges and breaking changes. Feedback and contributions welcome!
 
-A modern package manager for Roblox, built on top of Wally. Jelly provides a streamlined, pnpm-like experience by integrating dependency management directly into your Rojo project files, eliminating the need for separate `wally.toml` files.
+A modern package manager for Roblox, built on top of Wally. Jelly provides a streamlined, pnpm-like experience with intelligent package optimization and a clean JSON configuration format.
 
 ## Features
 
-- 📦 **Unified Configuration**: Manage dependencies directly in your `default.project.json` files
+- 📦 **Clean JSON Configuration**: Manage dependencies in a familiar `jelly.json` format
 - 🧹 **Smart Package Cleanup**: Automatically removes unnecessary files (docs, tests, README) and optimizes package structure
 - 💡 **Intelligent Module Resolution**: Handles messy package structures and fixes require paths automatically
 - 🔍 **Enhanced Package Search**: Search the Wally registry with customizable result limits
 - 📋 **Detailed Package Info**: Get comprehensive information about any package
-- 🚀 **Project Initialization**: Create new Rojo projects with a single command
 - 🎯 **Wally Compatible**: Uses the same packages and registry as Wally
 - 💾 **Space Efficient**: Like pnpm, removes bloat and keeps only what you need
 
@@ -23,7 +22,7 @@ Add Jelly to your `aftman.toml`:
 
 ```toml
 [tools]
-jelly = "OMouta/jelly@0.1.0"
+jelly = "OMouta/jelly@0.2.0"
 ```
 
 Then install:
@@ -56,7 +55,7 @@ jelly add -D roblox/testez
 ### Install dependencies
 
 ```bash
-# Install all dependencies from project.json
+# Install all dependencies from jelly.json
 jelly install
 
 # Install specific packages
@@ -96,9 +95,34 @@ jelly info roblox/roact
 jelly remove roblox/roact
 ```
 
+### Run scripts
+
+```bash
+# List available scripts
+jelly scripts
+
+# Run a script
+jelly run build
+
+# Run a script with arguments
+jelly run build --output game.rbxl
+```
+
 ## How it works
 
-Instead of maintaining a separate `wally.toml` file, Jelly integrates dependency management directly into your Rojo project configuration. Your `default.project.json` file can now include a `dependencies` and `devDependencies` section:
+Jelly uses a separate `jelly.json` file alongside your `default.project.json` to manage dependencies. This approach keeps your Rojo configuration clean while providing familiar JSON-based dependency management.
+
+### Project Structure
+
+```text
+my-project/
+├── default.project.json   
+├── jelly.json             # Jelly dependencies
+├── Packages/              # Your packages
+└── src/
+```
+
+### jelly.json Format
 
 ```json
 {
@@ -112,16 +136,17 @@ Instead of maintaining a separate `wally.toml` file, Jelly integrates dependency
   "devDependencies": {
     "roblox/testez": "^0.4.0"
   },
-  "tree": {
-    "$className": "DataModel",
-    "ReplicatedStorage": {
-      "Shared": {
-        "$path": "src/shared"
-      },
-      "Packages": {
-        "$path": "Packages"
-      }
-    }
+  "scripts": {
+    "build": "rojo build",
+    "serve": "rojo serve", 
+    "build:release": "rojo build --output game.rbxl",
+    "test": "rojo test",
+    "lint": "selene src"
+  },
+  "jelly": {
+    "cleanup": true,
+    "optimize": true,
+    "packagesPath": "Packages"
   }
 }
 ```
@@ -184,15 +209,13 @@ aftman install
 jelly init --name my-awesome-game
 cd my-awesome-game
 
-# Add dependencies (integrated in default.project.json)
+# Add dependencies (stored in jelly.json)
 jelly add roblox/roact
 jelly add sleitnick/signal
 
 # Build with Rojo as usual
 rojo build --output game.rbxl
 ```
-
-No more managing separate `wally.toml` files - everything is in your `default.project.json`!
 
 ## Commands
 
@@ -211,11 +234,11 @@ Install packages from the Wally registry.
 **Options:**
 
 - `-D, --dev`: Install as dev dependency
-- `--save`: Save to project.json dependencies (default)
+- `--save`: Save to jelly.json dependencies (default)
 
 ### `jelly add <packages...>`
 
-Add packages to project.json and install them.
+Add packages to jelly.json and install them.
 
 **Options:**
 
@@ -223,7 +246,7 @@ Add packages to project.json and install them.
 
 ### `jelly remove <packages...>`
 
-Remove packages from project.json and uninstall them.
+Remove packages from jelly.json and uninstall them.
 
 ### `jelly list`
 
@@ -260,6 +283,20 @@ Update packages to their latest compatible versions.
 
 Clean up the Packages directory by removing unused dependencies and clearing cache.
 
+### `jelly scripts`
+
+List all available scripts defined in jelly.json.
+
+### `jelly run <script> [args...]`
+
+Run a script defined in jelly.json.
+
+**Examples:**
+
+- `jelly run build` - Run the build script
+- `jelly run build --output game.rbxl` - Run build script with arguments
+- `jelly run serve` - Run the serve script
+
 ## Package Name Format
 
 Jelly uses the same package naming convention as Wally:
@@ -295,32 +332,17 @@ jelly install
 jelly remove roblox/roact
 ```
 
-## Project Structure
-
-After running `jelly init`, your project will have the following structure:
-
-```md
-my-project/
-├── default.project.json    # Rojo project config with dependencies
-├── src/
-│   ├── client/
-│   │   └── init.client.luau
-│   ├── server/
-│   │   └── init.server.luau
-│   └── shared/
-│       └── Hello.luau
-```
-
 ## Comparison with Wally
 
 | Feature | Wally | Jelly |
 |---------|-------|-------|
-| Configuration | Separate `wally.toml` | Integrated in `default.project.json` |
+| Configuration | Separate `wally.toml` | Separate `jelly.json` |
 | Package Cleanup | Downloads entire repos | Smart cleanup, removes bloat |
 | Package Registry | Wally Registry | Same Wally Registry |
 | Package Format | Same | Same |
 | CLI Interface | Basic | Enhanced with search limits |
 | Space Efficiency | Downloads everything | pnpm-like optimization |
+| Rojo Integration | Requires manual setup | Keeps project.json clean |
 
 ## Contributing
 

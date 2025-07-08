@@ -58,10 +58,15 @@ export class JellyManager {
     const spinner = ora('Installing all dependencies...').start();
 
     try {
-      const project = await this.projectManager.readProject();
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
       const allDeps = {
-        ...project.dependencies,
-        ...project.devDependencies
+        ...config.dependencies,
+        ...config.devDependencies
       };
 
       if (Object.keys(allDeps).length === 0) {
@@ -135,6 +140,17 @@ export class JellyManager {
 
       await this.projectManager.createProject(options);
       spinner.succeed('Project initialized successfully!');
+      
+      console.log(chalk.cyan('\n🪼 Created files:'));
+      console.log(chalk.blue('  → default.project.json') + chalk.gray(' (Rojo project configuration)'));
+      console.log(chalk.blue('  → jelly.json') + chalk.gray(' (Jelly dependencies and scripts)'));
+      console.log(chalk.blue('  → src/') + chalk.gray(' (Source code directory)'));
+      console.log(chalk.gray('\nNext steps:'));
+      console.log(chalk.gray('  → Add packages: ') + chalk.cyan('jelly add <package>'));
+      console.log(chalk.gray('  → Install dependencies: ') + chalk.cyan('jelly install'));
+      console.log(chalk.gray('  → Run scripts: ') + chalk.cyan('jelly run <script>'));
+      console.log(chalk.gray('  → List scripts: ') + chalk.cyan('jelly scripts'));
+      console.log(chalk.gray('  → Build with Rojo: ') + chalk.cyan('jelly run build'));
     } catch (error) {
       spinner.fail('Initialization failed');
       throw error;
@@ -267,32 +283,37 @@ export class JellyManager {
 
   async list(): Promise<void> {
     try {
-      const project = await this.projectManager.readProject();
+      if (!(await this.projectManager.jellyConfigExists())) {
+        console.log(chalk.yellow('No jelly.json found. Run "jelly init" first.'));
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
       const allDeps = {
-        ...project.dependencies,
-        ...project.devDependencies
+        ...config.dependencies,
+        ...config.devDependencies
       };
 
       if (Object.keys(allDeps).length === 0) {
-        console.log(chalk.yellow('No dependencies found in project.json'));
+        console.log(chalk.yellow('No dependencies found in jelly.json'));
         return;
       }
 
       console.log(chalk.cyan('\n🪼 Installed packages:\n'));
 
       // Show regular dependencies
-      if (project.dependencies && Object.keys(project.dependencies).length > 0) {
+      if (config.dependencies && Object.keys(config.dependencies).length > 0) {
         console.log(chalk.bold('Dependencies:'));
-        for (const [packageName, version] of Object.entries(project.dependencies)) {
+        for (const [packageName, version] of Object.entries(config.dependencies)) {
           console.log(chalk.blue(`  → ${packageName}@${version}`));
         }
         console.log();
       }
 
       // Show dev dependencies
-      if (project.devDependencies && Object.keys(project.devDependencies).length > 0) {
+      if (config.devDependencies && Object.keys(config.devDependencies).length > 0) {
         console.log(chalk.bold('Dev Dependencies:'));
-        for (const [packageName, version] of Object.entries(project.devDependencies)) {
+        for (const [packageName, version] of Object.entries(config.devDependencies)) {
           console.log(chalk.gray(`  → ${packageName}@${version}`));
         }
         console.log();
@@ -308,10 +329,15 @@ export class JellyManager {
     const spinner = ora('Checking for outdated packages...').start();
 
     try {
-      const project = await this.projectManager.readProject();
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return { outdated: [], upToDate: [] };
+      }
+
+      const config = await this.projectManager.readJellyConfig();
       const allDeps = {
-        ...project.dependencies,
-        ...project.devDependencies
+        ...config.dependencies,
+        ...config.devDependencies
       };
 
       if (Object.keys(allDeps).length === 0) {
@@ -334,13 +360,13 @@ export class JellyManager {
               name: packageName,
               current: currentVersion,
               latest: latestVersion,
-              isDev: project.devDependencies?.[packageName] !== undefined
+              isDev: config.devDependencies?.[packageName] !== undefined
             });
           } else {
             upToDate.push({
               name: packageName,
               version: currentVersion,
-              isDev: project.devDependencies?.[packageName] !== undefined
+              isDev: config.devDependencies?.[packageName] !== undefined
             });
           }
         } catch (error) {
@@ -348,7 +374,7 @@ export class JellyManager {
           upToDate.push({
             name: packageName,
             version: currentVersion,
-            isDev: project.devDependencies?.[packageName] !== undefined,
+            isDev: config.devDependencies?.[packageName] !== undefined,
             error: (error as Error).message
           });
         }
@@ -380,10 +406,15 @@ export class JellyManager {
     const spinner = ora('Updating packages...').start();
 
     try {
-      const project = await this.projectManager.readProject();
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
       const allDeps = {
-        ...project.dependencies,
-        ...project.devDependencies
+        ...config.dependencies,
+        ...config.devDependencies
       };
 
       if (Object.keys(allDeps).length === 0) {
@@ -442,7 +473,7 @@ export class JellyManager {
             continue;
           }
 
-          const isDev = project.devDependencies?.[packageName] !== undefined;
+          const isDev = config.devDependencies?.[packageName] !== undefined;
 
           spinner.text = `Updating ${packageName}: ${currentVersion} → ${latestVersion}...`;
           
@@ -481,10 +512,15 @@ export class JellyManager {
     const spinner = ora('Cleaning unused packages...').start();
 
     try {
-      const project = await this.projectManager.readProject();
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
       const allDeps = {
-        ...project.dependencies,
-        ...project.devDependencies
+        ...config.dependencies,
+        ...config.devDependencies
       };
 
       const packagesPath = this.packageDownloader.getPackagesPath();
@@ -574,6 +610,100 @@ export class JellyManager {
       }
     } catch (error) {
       // Silently fail - don't interrupt the main installation process
+    }
+  }
+
+  async run(scriptName: string, args: string[] = []): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (!(await this.projectManager.jellyConfigExists())) {
+          console.log(chalk.red('No jelly.json found. Run "jelly init" first.'));
+          resolve();
+          return;
+        }
+
+        const config = await this.projectManager.readJellyConfig();
+        
+        if (!config.scripts || !config.scripts[scriptName]) {
+          console.log(chalk.red(`Script "${scriptName}" not found in jelly.json`));
+          
+          if (config.scripts && Object.keys(config.scripts).length > 0) {
+            console.log(chalk.cyan('\nAvailable scripts:'));
+            for (const [name, command] of Object.entries(config.scripts)) {
+              console.log(chalk.blue(`  → ${name}: `) + chalk.gray(command));
+            }
+          } else {
+            console.log(chalk.gray('\nNo scripts defined in jelly.json'));
+          }
+          resolve();
+          return;
+        }
+
+        const command = config.scripts[scriptName];
+        const fullCommand = args.length > 0 ? `${command} ${args.join(' ')}` : command;
+        
+        console.log(chalk.cyan(`🪼 Running script: ${scriptName}`));
+        console.log(chalk.gray(`> ${fullCommand}\n`));
+
+        const { spawn } = await import('child_process');
+        const isWindows = process.platform === 'win32';
+        const shell = isWindows ? 'cmd' : 'sh';
+        const shellFlag = isWindows ? '/c' : '-c';
+
+        const childProcess = spawn(shell, [shellFlag, fullCommand], {
+          stdio: 'inherit',
+          cwd: this.projectManager.getProjectPath()
+        });
+
+        childProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log(chalk.green(`\n✨ Script "${scriptName}" completed successfully!`));
+            resolve();
+          } else {
+            console.log(chalk.red(`\n💥 Script "${scriptName}" failed with exit code ${code}`));
+            reject(new Error(`Script failed with exit code ${code}`));
+          }
+        });
+
+        childProcess.on('error', (error) => {
+          console.error(chalk.red(`Failed to run script: ${error.message}`));
+          reject(error);
+        });
+
+      } catch (error) {
+        console.error(chalk.red(`Error running script: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        reject(error);
+      }
+    });
+  }
+
+  async listScripts(): Promise<void> {
+    try {
+      if (!(await this.projectManager.jellyConfigExists())) {
+        console.log(chalk.yellow('No jelly.json found. Run "jelly init" first.'));
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
+      
+      if (!config.scripts || Object.keys(config.scripts).length === 0) {
+        console.log(chalk.yellow('No scripts defined in jelly.json'));
+        console.log(chalk.gray('\nTo add scripts, edit your jelly.json file:'));
+        console.log(chalk.gray('{\n  "scripts": {\n    "build": "rojo build",\n    "serve": "rojo serve"\n  }\n}'));
+        return;
+      }
+
+      console.log(chalk.cyan('\n🪼 Available scripts:\n'));
+      
+      for (const [name, command] of Object.entries(config.scripts)) {
+        console.log(chalk.blue(`  → ${name}`));
+        console.log(chalk.gray(`    ${command}`));
+        console.log();
+      }
+
+      console.log(chalk.gray(`Run a script with: ${chalk.cyan('jelly run <script-name>')}`));
+    } catch (error) {
+      console.error(chalk.red(`Error listing scripts: ${error instanceof Error ? error.message : 'Unknown error'}`));
     }
   }
 }

@@ -258,4 +258,33 @@ program
     }
   });
 
+program
+  .command('run <script>')
+  .description('Run a script defined in jelly.json')
+  .allowUnknownOption()
+  .action(async (scriptName: string, command) => {
+    const jelly = new JellyManager();
+    try {
+      // Get any additional args passed to the script
+      const args = process.argv.slice(process.argv.indexOf(scriptName) + 1);
+      await jelly.run(scriptName, args);
+    } catch (error) {
+      console.error(chalk.red('💥 Script failed:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('scripts')
+  .description('List all available scripts')
+  .action(async () => {
+    const jelly = new JellyManager();
+    try {
+      await jelly.listScripts();
+    } catch (error) {
+      console.error(chalk.red('💥 Failed to list scripts:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);

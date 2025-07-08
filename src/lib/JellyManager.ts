@@ -4,17 +4,23 @@ import { ProjectManager } from './ProjectManager';
 import { WallyAPI } from './WallyAPI';
 import { PackageDownloader } from './PackageDownloader';
 import { LockfileManager } from './LockfileManager';
-import { InstallOptions, InitOptions } from '../types';
+import { WorkspaceManager } from './WorkspaceManager';
+import { VersionResolver, DependencyConflict } from './VersionResolver';
+import { InstallOptions, InitOptions, LockfileEntry } from '../types';
 
 export class JellyManager {
   private projectManager: ProjectManager;
   private packageDownloader: PackageDownloader;
   private lockfileManager: LockfileManager;
+  private workspaceManager: WorkspaceManager;
+  private versionResolver: VersionResolver;
 
   constructor(projectPath?: string) {
     this.projectManager = new ProjectManager(projectPath);
     this.packageDownloader = new PackageDownloader(projectPath);
     this.lockfileManager = new LockfileManager(projectPath);
+    this.workspaceManager = new WorkspaceManager(projectPath);
+    this.versionResolver = new VersionResolver();
   }
 
   async install(packages: string[], options: InstallOptions = {}): Promise<void> {
@@ -27,8 +33,10 @@ export class JellyManager {
         let version = parsed.version;
 
         if (!version) {
-          spinner.text = `Getting latest version for ${parsed.scope}/${parsed.name}...`;
-          version = await WallyAPI.getLatestVersion(parsed.scope, parsed.name);
+          spinner.text = `Resolving latest version for ${parsed.scope}/${parsed.name}...`;
+          // Use version resolver to get the latest version
+          const resolved = await this.versionResolver.resolveVersion(parsed.scope, parsed.name, '*');
+          version = resolved.version;
         }
 
         spinner.text = `Adding ${parsed.scope}/${parsed.name}@${version} to project...`;
@@ -42,15 +50,24 @@ export class JellyManager {
       // Read updated config and update/generate lockfile
       const config = await this.projectManager.readJellyConfig();
       spinner.text = 'Updating lockfile...';
-      const lockfile = await this.lockfileManager.updateLockfile(config);
+      const { lockfile, conflicts } = await this.lockfileManager.updateLockfile(config);
+      
+      // Display version conflicts if any
+      if (conflicts.length > 0) {
+        spinner.stop();
+        this.displayVersionConflicts(conflicts);
+        spinner.start();
+      }
+      
       await this.lockfileManager.writeLockfile(lockfile);
 
       // Download packages from lockfile
       spinner.text = 'Downloading packages...';
       for (const [packageName, lockfileEntry] of Object.entries(lockfile.packages)) {
         const parsed = WallyAPI.parsePackageName(packageName);
-        spinner.text = `Downloading ${packageName}@${lockfileEntry.version}...`;
-        await this.packageDownloader.downloadFromLockfile(lockfileEntry, parsed.scope, parsed.name);
+        const entry = lockfileEntry as LockfileEntry;
+        spinner.text = `Downloading ${packageName}@${entry.version}...`;
+        await this.packageDownloader.downloadFromLockfile(entry, parsed.scope, parsed.name);
       }
 
       // Generate package index and update project file
@@ -96,9 +113,19 @@ export class JellyManager {
 
       if (!lockfileExists || !lockfileValid) {
         spinner.text = 'Generating lockfile...';
-        const lockfile = await this.lockfileManager.generateLockfile(config);
+        const { lockfile, conflicts } = await this.lockfileManager.generateLockfile(config);
+        
+        // Display version conflicts if any
+        if (conflicts.length > 0) {
+          spinner.stop();
+          this.displayVersionConflicts(conflicts);
+          spinner.start();
+        }
+        
         await this.lockfileManager.writeLockfile(lockfile);
+        spinner.stop();
         console.log(chalk.green('📋 Generated jelly-lock.json'));
+        spinner.start();
       }
 
       // Read lockfile and install packages
@@ -112,13 +139,14 @@ export class JellyManager {
       // Download and install each package from lockfile
       for (const [packageName, lockfileEntry] of Object.entries(lockfile.packages)) {
         const parsed = WallyAPI.parsePackageName(packageName);
-        spinner.text = `Downloading ${packageName}@${lockfileEntry.version}...`;
+        const entry = lockfileEntry as LockfileEntry;
+        spinner.text = `Downloading ${packageName}@${entry.version}...`;
         
         try {
-          await this.packageDownloader.downloadFromLockfile(lockfileEntry, parsed.scope, parsed.name);
+          await this.packageDownloader.downloadFromLockfile(entry, parsed.scope, parsed.name);
         } catch (error) {
           // If package download fails, log but continue with other packages
-          spinner.text = `⚠ Could not download ${packageName}@${lockfileEntry.version} (${(error as Error).message})`;
+          spinner.text = `⚠ Could not download ${packageName}@${entry.version} (${(error as Error).message})`;
           await new Promise(resolve => setTimeout(resolve, 1500)); // Brief pause to show message
         }
       }
@@ -159,15 +187,42 @@ export class JellyManager {
       // Update lockfile after removing packages
       const config = await this.projectManager.readJellyConfig();
       spinner.text = 'Updating lockfile...';
-      const lockfile = await this.lockfileManager.updateLockfile(config);
+      const { lockfile, conflicts } = await this.lockfileManager.updateLockfile(config);
+      
+      // Display version conflicts if any
+      if (conflicts.length > 0) {
+        spinner.stop();
+        this.displayVersionConflicts(conflicts);
+        spinner.start();
+      }
+      
       await this.lockfileManager.writeLockfile(lockfile);
 
-      spinner.succeed('Packages removed successfully!');
+      // Clean up package files using the existing clean method
+      spinner.stop();
+      await this.clean();
+
       console.log(chalk.green(`📋 Lockfile updated: ${this.lockfileManager.getLockfilePath()}`));
     } catch (error) {
       spinner.fail('Removal failed');
       throw error;
     }
+  }
+
+  private displayVersionConflicts(conflicts: DependencyConflict[]): void {
+    if (conflicts.length === 0) return;
+
+    console.log(chalk.yellow('\n⚠️  Version conflicts detected:'));
+    for (const conflict of conflicts) {
+      console.log(chalk.yellow(`  ${conflict.packageName}:`));
+      for (const c of conflict.conflicts) {
+        console.log(chalk.gray(`    ${c.requiredBy} requires ${c.versionRange}`));
+      }
+      if (conflict.resolvedVersion) {
+        console.log(chalk.green(`    → Resolved to ${conflict.resolvedVersion}`));
+      }
+    }
+    console.log();
   }
 
   async init(options: InitOptions = {}): Promise<void> {
@@ -687,7 +742,13 @@ export class JellyManager {
       await this.lockfileManager.deleteLockfile();
       
       // Generate new lockfile
-      const lockfile = await this.lockfileManager.generateLockfile(config);
+      const { lockfile, conflicts } = await this.lockfileManager.generateLockfile(config);
+      
+      // Display version conflicts if any
+      if (conflicts.length > 0) {
+        this.displayVersionConflicts(conflicts);
+      }
+      
       await this.lockfileManager.writeLockfile(lockfile);
 
       spinner.succeed('Lockfile regenerated successfully!');
@@ -802,6 +863,95 @@ export class JellyManager {
       console.log(chalk.gray(`Run a script with: ${chalk.cyan('jelly run <script-name>')}`));
     } catch (error) {
       console.error(chalk.red(`Error listing scripts: ${error instanceof Error ? error.message : 'Unknown error'}`));
+    }
+  }
+
+  // Workspace methods
+  async initWorkspace(options: InitOptions = {}): Promise<void> {
+    return await this.workspaceManager.initWorkspace(options);
+  }
+
+  async createWorkspace(workspacePath: string, options: { name?: string } = {}): Promise<void> {
+    return await this.workspaceManager.createWorkspace(workspacePath, options);
+  }
+
+  async listWorkspaces(): Promise<void> {
+    return await this.workspaceManager.listWorkspaces();
+  }
+
+  async installAllWorkspaces(options: { parallel?: boolean } = {}): Promise<void> {
+    return await this.workspaceManager.installAllWorkspaces(options);
+  }
+
+  async addToWorkspace(workspaceName: string, packages: string[], options: { dev?: boolean } = {}): Promise<void> {
+    return await this.workspaceManager.addToWorkspace(workspaceName, packages, options);
+  }
+
+  async runScriptInWorkspaces(
+    scriptName: string, 
+    args: string[] = [], 
+    options: { filter?: string[]; exclude?: string[]; parallel?: boolean } = {}
+  ): Promise<void> {
+    return await this.workspaceManager.runScriptInWorkspaces(scriptName, args, options);
+  }
+
+  async isWorkspace(): Promise<boolean> {
+    return await this.workspaceManager.isWorkspace();
+  }
+
+  async getCurrentWorkspace() {
+    return await this.workspaceManager.getCurrentWorkspace();
+  }
+
+  async analyzeDependencies(): Promise<void> {
+    const spinner = ora('Analyzing dependencies...').start();
+
+    try {
+      if (!(await this.projectManager.jellyConfigExists())) {
+        spinner.fail('No jelly.json found. Run "jelly init" first.');
+        return;
+      }
+
+      const config = await this.projectManager.readJellyConfig();
+      const allDeps = {
+        ...config.dependencies,
+        ...config.devDependencies
+      };
+
+      if (Object.keys(allDeps).length === 0) {
+        spinner.info('No dependencies to analyze');
+        return;
+      }
+
+      spinner.text = 'Resolving dependency tree...';
+      const resolutionResult = await this.versionResolver.resolveDependencyTree(allDeps);
+
+      spinner.succeed('Dependency analysis complete!');
+
+      // Display resolved packages
+      console.log(chalk.blue('\n📦 Resolved packages:'));
+      for (const [packageName, resolved] of resolutionResult.resolved) {
+        console.log(chalk.gray(`  ${packageName}@${resolved.version}`));
+      }
+
+      // Display conflicts if any
+      if (resolutionResult.conflicts.length > 0) {
+        this.displayVersionConflicts(resolutionResult.conflicts);
+      } else {
+        console.log(chalk.green('\n✅ No version conflicts detected!'));
+      }
+
+      // Show resolution statistics
+      console.log(chalk.blue(`\n📊 Resolution statistics:`));
+      console.log(chalk.gray(`  Total packages: ${resolutionResult.resolved.size}`));
+      console.log(chalk.gray(`  Conflicts: ${resolutionResult.conflicts.length}`));
+      
+      const cacheStats = this.versionResolver.getCacheStats();
+      console.log(chalk.gray(`  Cache size: ${cacheStats.size} packages`));
+
+    } catch (error) {
+      spinner.fail('Dependency analysis failed');
+      throw error;
     }
   }
 }

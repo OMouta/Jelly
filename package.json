@@ -1,6 +1,6 @@
 {
   "name": "@omouta/jelly",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A modern package manager for Roblox, built on top of Wally",
   "author": "OMouta",
   "license": "MIT",
@@ -13,7 +13,8 @@
     "url": "https://github.com/OMouta/jelly/issues"
   },
   "bin": {
-    "jelly": "./dist/src/bin/jelly.js"
+    "jelly-dev": "./dist/src/bin/jelly.js",
+    "jd": "./dist/src/bin/jelly.js"
   },
   "scripts": {
     "build": "tsc",
@@ -49,16 +50,20 @@
   },
   "dependencies": {
     "@types/figlet": "^1.7.0",
+    "@types/semver": "^7.7.0",
     "adm-zip": "^0.5.10",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
     "figlet": "^1.8.1",
     "fs-extra": "^11.2.0",
-    "ora": "^5.4.1"
+    "glob": "^10.3.10",
+    "ora": "^5.4.1",
+    "semver": "^7.7.2"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",
     "@types/fs-extra": "^11.0.4",
+    "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.5",
     "jest": "^29.7.0",

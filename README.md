@@ -1,6 +1,6 @@
 # Jelly 🪼
 
-> ⚠️ **Beta Release**: Jelly is currently in beta (v0.2.0). While functional, expect some rough edges and breaking changes. Feedback and contributions welcome!
+> ⚠️ **Beta Release**: Jelly is currently in beta (v0.3.0). While functional, expect some rough edges and breaking changes. Feedback and contributions welcome!
 
 A modern package manager for Roblox, built on top of Wally. Jelly provides a streamlined, pnpm-like experience with intelligent package optimization and a clean JSON configuration format.
 
@@ -8,6 +8,7 @@ A modern package manager for Roblox, built on top of Wally. Jelly provides a str
 
 - 📦 **Clean JSON Configuration**: Manage dependencies in a familiar `jelly.json` format
 - 🔒 **Lockfile Support**: Reproducible installs with `jelly-lock.json` (like package-lock.json)
+- 🏢 **Workspace/Monorepo Support**: Manage multiple packages in a single repository (like npm/pnpm workspaces)
 - 🧹 **Smart Package Cleanup**: Automatically removes unnecessary files (docs, tests, README) and optimizes package structure
 - 💡 **Intelligent Module Resolution**: Handles messy package structures and fixes require paths automatically
 - 🔍 **Enhanced Package Search**: Search the Wally registry with customizable result limits
@@ -152,7 +153,7 @@ my-project/
 }
 ```
 
-## Smart Package Cleanup 🧹
+## Smart Package Cleanup
 
 Unlike traditional package managers that dump entire repositories into your project, Jelly intelligently processes packages to keep only what you need:
 
@@ -298,6 +299,25 @@ Run a script defined in jelly.json.
 - `jelly run build --output game.rbxl` - Run build script with arguments
 - `jelly run serve` - Run the serve script
 
+### `jelly workspace [command]`
+
+Manage workspaces for monorepo development.
+
+**Subcommands:**
+
+- `init`: Initialize workspace root
+- `create <path>`: Create new workspace package  
+- `list`: List all workspaces
+- `install`: Install dependencies for all workspaces
+- `add <workspace> <packages...>`: Add packages to specific workspace
+- `run <script>`: Run script in all workspaces
+
+**Options:**
+
+- `--parallel`: Run operations in parallel
+- `--filter <patterns...>`: Filter workspaces by name/path
+- `--exclude <patterns...>`: Exclude workspaces by name/path
+
 ### `jelly lockfile [options]`
 
 Manage the lockfile for reproducible installs.
@@ -307,11 +327,24 @@ Manage the lockfile for reproducible installs.
 - `--verify`: Verify lockfile integrity against jelly.json
 - `--regenerate`: Regenerate lockfile from jelly.json
 
-## Lockfile Support 🔒
+### `jelly analyze`
+
+Analyze dependency tree and show version conflicts without installing packages.
+
+**Alias:** `deps`
+
+**Features:**
+
+- Resolves all semver ranges to exact versions
+- Detects and reports version conflicts  
+- Shows dependency resolution statistics
+- Displays package cache information
+
+## Lockfile Support
 
 Jelly uses a `jelly-lock.json` file to ensure reproducible installs across different environments. This file:
 
-- **Locks exact versions** of all dependencies and their sub-dependencies
+- **Locks exact versions** of all dependencies and their sub-dependency
 - **Stores resolved URLs** for faster downloads
 - **Prevents version drift** between different machines/CI environments
 - **Ensures consistent builds** for your team
@@ -335,54 +368,239 @@ jelly lockfile --regenerate
 
 **Note**: Like npm's `package-lock.json`, you should commit `jelly-lock.json` to version control to ensure your team gets identical dependency versions.
 
-## Package Name Format
+## Workspace/Monorepo Support
 
-Jelly uses the same package naming convention as Wally:
+Jelly supports workspaces (monorepos) similar to npm/pnpm workspaces, allowing you to manage multiple Roblox projects in a single repository.
 
-- `scope/name` - Install latest version
-- `scope/name@version` - Install specific version
-- `scope/name@^version` - Install compatible version
-
-## Examples
+### Setting up a workspace
 
 ```bash
 # Initialize a new project
-jelly init --name my-awesome-game
+jelly init --name my-roblox-workspace
+cd my-roblox-workspace
 
-# Add popular packages
-jelly add roblox/roact
-jelly add roblox/rodux
-jelly add -D roblox/testez
+# Convert to workspace root
+jelly workspace init
 
-# List what's installed
-jelly list
-
-# Search for roact libraries
-jelly search roact --limit 5
-
-# Get info about a specific package
-jelly info roblox/roact
-
-# Install all dependencies
-jelly install
-
-# Remove a package
-jelly remove roblox/roact
+# Create workspace packages
+jelly workspace create packages/shared-ui --name shared-ui
+jelly workspace create packages/game-logic --name game-logic
+jelly workspace create apps/main-game --name main-game
 ```
+
+### Workspace structure
+
+```text
+my-roblox-workspace/
+├── jelly.json              # Root workspace config
+├── jelly-lock.json         # Shared lockfile
+├── packages/
+│   ├── shared-ui/
+│   │   ├── jelly.json
+│   │   ├── default.project.json
+│   │   └── src/
+│   └── game-logic/
+│       ├── jelly.json
+│       ├── default.project.json
+│       └── src/
+├── apps/
+│   └── main-game/
+│       ├── jelly.json
+│       ├── default.project.json
+│       └── src/
+└── Packages/               # Shared dependencies
+```
+
+### Workspace commands
+
+```bash
+# List all workspaces
+jelly workspace list
+
+# Install dependencies for all workspaces
+jelly workspace install
+
+# Install dependencies in parallel (faster)
+jelly workspace install --parallel
+
+# Add packages to specific workspace
+jelly workspace add shared-ui roblox/roact roblox/rodux
+
+# Run scripts across all workspaces
+jelly workspace run build
+
+# Run scripts with filters
+jelly workspace run test --filter packages
+jelly workspace run build --exclude apps
+
+# Run scripts in parallel
+jelly workspace run build --parallel
+```
+
+### Root workspace configuration
+
+```json
+{
+  "name": "my-roblox-workspace",
+  "version": "1.0.0",
+  "description": "My awesome Roblox workspace",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:all": "jelly workspace run build",
+    "test:all": "jelly workspace run test",
+    "install:all": "jelly workspace install --parallel"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "roblox/testez": "^0.4.0"
+  }
+}
+```
+
+### Advanced workspace patterns
+
+```json
+{
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "apps/*",
+      "tools/*"
+    ],
+    "nohoist": [
+      "**/roblox/roact",
+      "apps/*/roblox/**"
+    ]
+  }
+}
+```
+
+### Benefits of workspaces
+
+- **Shared dependencies**: Install common packages once in the root
+- **Consistent versions**: All workspaces use the same dependency versions via shared lockfile
+- **Efficient builds**: Run scripts across multiple packages with one command
+- **Easy maintenance**: Update dependencies across all packages simultaneously
+- **Better organization**: Separate concerns into focused packages
+
+## Version Resolution & Range Handling
+
+Jelly provides advanced semver version resolution and conflict detection, ensuring your dependencies are resolved consistently and reliably.
+
+### Semver Range Support
+
+Jelly supports the full range of semantic versioning patterns:
+
+```json
+{
+  "dependencies": {
+    "roblox/roact": "^1.4.0",      // Compatible with 1.x.x (>=1.4.0 <2.0.0)
+    "roblox/rodux": "~3.1.0",      // Compatible with 3.1.x (>=3.1.0 <3.2.0)
+    "evaera/promise": ">=4.0.0",   // Any version >= 4.0.0
+    "sleitnick/signal": "1.5.0"    // Exact version 1.5.0
+  }
+}
+```
+
+### Version Conflict Detection
+
+When multiple packages require different versions of the same dependency, Jelly automatically detects conflicts and attempts to resolve them:
+
+```bash
+jelly install
+# or
+jelly analyze  # For dependency analysis only
+```
+
+### Example: Conflict Resolution
+
+**Scenario**: Two packages require different versions of the same dependency
+
+```json
+{
+  "dependencies": {
+    "package-a": "^1.0.0",  // requires shared-lib@^1.2.0
+    "package-b": "^2.0.0"   // requires shared-lib@^1.5.0
+  }
+}
+```
+
+**Jelly Output**:
+
+```bash
+🪼 Analyzing dependencies...
+
+⚠️  Version conflicts detected:
+  shared-lib:
+    package-a requires ^1.2.0
+    package-b requires ^1.5.0
+    → Resolved to 1.5.2
+
+✔ Dependency analysis complete!
+📦 Resolved packages:
+  package-a@1.0.3
+  package-b@2.1.0
+  shared-lib@1.5.2
+
+📊 Resolution statistics:
+  Total packages: 3
+  Conflicts: 1
+  Cache size: 3 packages
+```
+
+### Resolution Strategy
+
+Jelly uses an intelligent resolution strategy:
+
+1. **Range Intersection**: Finds the highest version that satisfies all requirements
+2. **Conflict Detection**: Identifies when no compatible version exists
+3. **Clear Reporting**: Shows which packages caused conflicts and how they were resolved
+4. **Lockfile Integration**: Locks resolved versions for reproducible installs
+
+### Dependency Analysis Command
+
+Use the `analyze` command to inspect your dependency tree without installing:
+
+```bash
+# Analyze dependencies and show conflicts
+jelly analyze
+
+# Short alias
+jelly deps
+```
+
+This command will:
+
+- Resolve all dependency ranges
+- Detect version conflicts
+- Show resolution statistics
+- Display cache information
+
+### Benefits Over Basic Package Managers
+
+- **No Silent Failures**: Conflicts are detected and reported clearly
+- **Predictable Resolutions**: Same input always produces same output
+- **Performance Optimized**: Caches package metadata for faster resolution
+- **Developer Friendly**: Clear conflict reporting helps debug dependency issues
 
 ## Comparison with Wally
 
 | Feature | Wally | Jelly |
 |---------|-------|-------|
 | Configuration | Separate `wally.toml` | Separate `jelly.json` |
-| Lockfile Support | None | `jelly-lock.json` for reproducible installs |
+| Lockfile Support | `wally-lock.toml` | `jelly-lock.json` |
+| Version Resolution | Basic | Advanced semver with conflict detection |
+| Workspace Support | None | Full monorepo/workspace support |
 | Package Cleanup | Downloads entire repos | Smart cleanup, removes bloat |
 | Package Registry | Wally Registry | Same Wally Registry |
 | Package Format | Same | Same |
 | CLI Interface | Basic | Enhanced with search limits |
 | Space Efficiency | Downloads everything | pnpm-like optimization |
-| Rojo Integration | Requires manual setup | Keeps project.json clean |
-| Reproducible Installs | No | Yes, via lockfile |
+| Parallel Operations | No | Yes, for workspaces and installs |
+| Dependency Analysis | No | Built-in conflict detection and reporting |
 
 ## Why JavaScript?
 

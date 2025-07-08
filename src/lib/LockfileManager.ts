@@ -2,14 +2,17 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { JellyLockfile, LockfileEntry, JellyConfig } from '../types';
 import { WallyAPI } from './WallyAPI';
+import { VersionResolver, DependencyConflict } from './VersionResolver';
 
 export class LockfileManager {
   private projectPath: string;
   private lockfilePath: string;
+  private versionResolver: VersionResolver;
 
   constructor(projectPath: string = process.cwd()) {
     this.projectPath = projectPath;
     this.lockfilePath = path.join(this.projectPath, 'jelly-lock.json');
+    this.versionResolver = new VersionResolver();
   }
 
   async readLockfile(): Promise<JellyLockfile | null> {
@@ -44,7 +47,7 @@ export class LockfileManager {
     }
   }
 
-  async generateLockfile(config: JellyConfig): Promise<JellyLockfile> {
+  async generateLockfile(config: JellyConfig): Promise<{ lockfile: JellyLockfile; conflicts: DependencyConflict[] }> {
     const lockfile: JellyLockfile = {
       lockfileVersion: 1,
       name: config.name,
@@ -54,15 +57,31 @@ export class LockfileManager {
       devDependencies: { ...config.devDependencies }
     };
 
-    // Resolve all dependencies
+    // Resolve all dependencies using the version resolver
     const allDeps = {
       ...config.dependencies,
       ...config.devDependencies
     };
 
-    await this.resolveDependencies(allDeps, lockfile.packages);
+    const resolutionResult = await this.versionResolver.resolveDependencyTree(allDeps);
+    
+    // Convert resolved versions to lockfile entries
+    for (const [packageName, resolved] of resolutionResult.resolved) {
+      const versionInfo = resolved.packageInfo.versions.find(v => v.package.version === resolved.version);
+      if (versionInfo) {
+        lockfile.packages[packageName] = {
+          version: resolved.version,
+          resolved: `https://api.wally.run/v1/package-contents/${packageName}/${resolved.version}`,
+          dependencies: versionInfo.dependencies || {},
+          devDependencies: versionInfo['dev-dependencies'] || {}
+        };
+      }
+    }
 
-    return lockfile;
+    return {
+      lockfile,
+      conflicts: resolutionResult.conflicts
+    };
   }
 
   private async resolveDependencies(
@@ -172,7 +191,7 @@ export class LockfileManager {
     return false;
   }
 
-  async updateLockfile(config: JellyConfig): Promise<JellyLockfile> {
+  async updateLockfile(config: JellyConfig): Promise<{ lockfile: JellyLockfile; conflicts: DependencyConflict[] }> {
     const existingLockfile = await this.readLockfile();
     
     if (!existingLockfile) {
@@ -186,11 +205,14 @@ export class LockfileManager {
     const hasChanges = JSON.stringify(configDeps) !== JSON.stringify(lockfileDeps);
 
     if (hasChanges) {
-      console.log('📋 Dependencies changed, updating lockfile...');
+      // Don't print here - let the caller handle the message
       return await this.generateLockfile(config);
     }
 
-    return existingLockfile;
+    return {
+      lockfile: existingLockfile,
+      conflicts: []
+    };
   }
 
   async validateLockfile(config: JellyConfig): Promise<boolean> {

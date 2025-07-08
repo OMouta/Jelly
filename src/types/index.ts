@@ -15,6 +15,10 @@ export interface JellyConfig {
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
   scripts?: Record<string, string>;
+  workspaces?: string[] | {
+    packages: string[];
+    nohoist?: string[];
+  };
   jelly?: {
     cleanup?: boolean;
     optimize?: boolean;
@@ -87,4 +91,17 @@ export interface JellyLockfile {
   packages: Record<string, LockfileEntry>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+}
+
+export interface WorkspaceInfo {
+  name: string;
+  path: string;
+  config: JellyConfig;
+  isRoot: boolean;
+}
+
+export interface WorkspaceOptions {
+  recursive?: boolean;
+  filter?: string[];
+  exclude?: string[];
 }

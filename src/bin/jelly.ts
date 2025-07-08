@@ -311,4 +311,124 @@ program
     }
   });
 
+program
+  .command('workspace')
+  .description('Manage workspaces (monorepo support)')
+  .addCommand(
+    new Command('init')
+      .description('Initialize workspace root')
+      .option('-n, --name <name>', 'Root workspace name')
+      .action(async (options) => {
+        const jelly = new JellyManager();
+        try {
+          console.log(chalk.cyan('🪼 ') + chalk.bold('Initializing workspace root...'));
+          await jelly.initWorkspace(options);
+          console.log(chalk.green('✨ Workspace root initialized!'));
+        } catch (error) {
+          console.error(chalk.red('💥 Workspace init failed:'), (error as Error).message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('create')
+      .description('Create a new workspace package')
+      .argument('<path>', 'Path for the new workspace')
+      .option('-n, --name <name>', 'Workspace package name')
+      .action(async (workspacePath, options) => {
+        const jelly = new JellyManager();
+        try {
+          console.log(chalk.cyan('🪼 ') + chalk.bold(`Creating workspace at ${workspacePath}...`));
+          await jelly.createWorkspace(workspacePath, options);
+          console.log(chalk.green('✨ Workspace created!'));
+        } catch (error) {
+          console.error(chalk.red('💥 Workspace creation failed:'), (error as Error).message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('list')
+      .alias('ls')
+      .description('List all workspaces')
+      .action(async () => {
+        const jelly = new JellyManager();
+        try {
+          await jelly.listWorkspaces();
+        } catch (error) {
+          console.error(chalk.red('💥 Failed to list workspaces:'), (error as Error).message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('install')
+      .description('Install dependencies for all workspaces')
+      .option('--parallel', 'Install workspaces in parallel')
+      .action(async (options) => {
+        const jelly = new JellyManager();
+        try {
+          console.log(chalk.cyan('🪼 ') + chalk.bold('Installing workspace dependencies...'));
+          await jelly.installAllWorkspaces(options);
+          console.log(chalk.green('✨ All workspaces installed!'));
+        } catch (error) {
+          console.error(chalk.red('💥 Workspace install failed:'), (error as Error).message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('add')
+      .description('Add packages to a specific workspace')
+      .argument('<workspace>', 'Workspace name')
+      .argument('<packages...>', 'Packages to add')
+      .option('-D, --dev', 'Add as dev dependency')
+      .action(async (workspace, packages, options) => {
+        const jelly = new JellyManager();
+        try {
+          console.log(chalk.cyan('🪼 ') + chalk.bold(`Adding packages to workspace ${workspace}...`));
+          await jelly.addToWorkspace(workspace, packages, options);
+          console.log(chalk.green('✨ Packages added to workspace!'));
+        } catch (error) {
+          console.error(chalk.red('💥 Failed to add packages to workspace:'), (error as Error).message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('run')
+      .description('Run a script in all workspaces')
+      .argument('<script>', 'Script name to run')
+      .argument('[args...]', 'Arguments to pass to the script')
+      .option('--filter <patterns...>', 'Filter workspaces by name/path pattern')
+      .option('--exclude <patterns...>', 'Exclude workspaces by name/path pattern')
+      .option('--parallel', 'Run scripts in parallel')
+      .action(async (script, args, options) => {
+        const jelly = new JellyManager();
+        try {
+          console.log(chalk.cyan('🪼 ') + chalk.bold(`Running "${script}" in workspaces...`));
+          await jelly.runScriptInWorkspaces(script, args, options);
+          console.log(chalk.green('✨ Script completed in all workspaces!'));
+        } catch (error) {
+          console.error(chalk.red('💥 Workspace script failed:'), (error as Error).message);
+          process.exit(1);
+        }
+      })
+  );
+
+program
+  .command('analyze')
+  .alias('deps')
+  .description('Analyze dependency tree and show version conflicts')
+  .action(async () => {
+    const jelly = new JellyManager();
+    try {
+      console.log(chalk.cyan('🪼 ') + chalk.bold('Analyzing dependencies...'));
+      await jelly.analyzeDependencies();
+    } catch (error) {
+      console.error(chalk.red('💥 Failed to analyze dependencies:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);

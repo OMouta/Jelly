@@ -1,0 +1,65 @@
+name: Question/Support
+description: Ask a question or get help using Jelly
+title: "[Question]: "
+labels: ["question", "support"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your question! 🪼
+        
+        Please check the [documentation](https://github.com/OMouta/Jelly/blob/main/README.md) first to see if your question is already answered.
+
+  - type: input
+    id: version
+    attributes:
+      label: Jelly Version
+      description: What version of Jelly are you using?
+      placeholder: "0.3.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: How do I...?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context about your project or use case
+      placeholder: I'm working on a Roblox game that...
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: What Have You Tried?
+      description: What have you already attempted to solve this?
+      placeholder: |
+        1. I tried running `jelly command`
+        2. I looked at the documentation section X
+        3. I searched for similar issues
+
+  - type: textarea
+    id: project-config
+    attributes:
+      label: Project Configuration (if relevant)
+      description: Share your jelly.json or other relevant configuration
+      render: json
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: By submitting this question, you agree to the following
+      options:
+        - label: I have read the documentation
+          required: true
+        - label: I have searched existing issues for similar questions
+          required: true

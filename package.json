@@ -1,6 +1,6 @@
 {
   "name": "@omouta/jelly",
-  "version": "0.2.1",
+  "version": "0.2.0",
   "description": "A modern package manager for Roblox, built on top of Wally",
   "author": "OMouta",
   "license": "MIT",
@@ -24,11 +24,7 @@
     "build:binaries": "npm run build && pkg . --out-path binaries",
     "build:linux": "npm run build && pkg . --targets node18-linux-x64 --out-path binaries",
     "build:windows": "npm run build && pkg . --targets node18-win-x64 --out-path binaries",
-    "build:mac": "npm run build && pkg . --targets node18-macos-x64 --out-path binaries",
-    "bun:build": "bun build --compile --minify --sourcemap --bytecode ./src/bin/jelly.ts --outfile jelly",
-    "bun:build:linux": "bun build --compile --minify --sourcemap --bytecode --target=bun-linux-x64 ./src/bin/jelly.ts --outfile jelly-linux",
-    "bun:build:windows": "bun build --compile --minify --sourcemap --bytecode --target=bun-windows-x64 ./src/bin/jelly.ts --outfile jelly.exe",
-    "bun:build:mac": "bun build --compile --minify --sourcemap --bytecode --target=bun-darwin-x64 ./src/bin/jelly.ts --outfile jelly-macos"
+    "build:mac": "npm run build && pkg . --targets node18-macos-x64 --out-path binaries"
   },
   "files": [
     "dist/**/*"
@@ -62,7 +58,6 @@
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",
-    "@types/bun": "^1.2.18",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.5",

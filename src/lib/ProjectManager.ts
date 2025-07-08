@@ -1,5 +1,4 @@
 import * as fs from 'fs-extra';
-import * as fsNative from 'fs';
 import * as path from 'path';
 import { RojoProject, JellyConfig } from '../types';
 
@@ -34,82 +33,39 @@ export class ProjectManager {
   }
 
   async readProject(): Promise<RojoProject> {
-    // Use Bun's optimized file API if available, fallback to Node.js fs
-    if (typeof Bun !== 'undefined' && Bun.file) {
-      const file = Bun.file(this.rojoConfigPath);
-      
-      if (!(await file.exists())) {
-        throw new Error(`Rojo project file not found at ${this.rojoConfigPath}`);
-      }
+    if (!fs.existsSync(this.rojoConfigPath)) {
+      throw new Error(`Rojo project file not found at ${this.rojoConfigPath}`);
+    }
 
-      try {
-        const project = await file.json() as RojoProject;
-        return project;
-      } catch (error) {
-        throw new Error(`Failed to read project file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    } else {
-      // Fallback to fs-extra for Node.js compatibility
-      if (!fs.existsSync(this.rojoConfigPath)) {
-        throw new Error(`Rojo project file not found at ${this.rojoConfigPath}`);
-      }
-
-      try {
-        const content = await fs.readFile(this.rojoConfigPath, 'utf-8');
-        const project = JSON.parse(content) as RojoProject;
-        return project;
-      } catch (error) {
-        throw new Error(`Failed to read project file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+    try {
+      const content = await fs.readFile(this.rojoConfigPath, 'utf-8');
+      const project = JSON.parse(content) as RojoProject;
+      return project;
+    } catch (error) {
+      throw new Error(`Failed to read project file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   async readJellyConfig(): Promise<JellyConfig> {
-    // Use Bun's optimized file API if available, fallback to Node.js fs
-    if (typeof Bun !== 'undefined' && Bun.file) {
-      const file = Bun.file(this.jellyConfigPath);
+    if (!fs.existsSync(this.jellyConfigPath)) {
+      throw new Error(`Jelly config file not found at ${this.jellyConfigPath}`);
+    }
+
+    try {
+      const content = await fs.readFile(this.jellyConfigPath, 'utf-8');
+      const config = JSON.parse(content) as JellyConfig;
       
-      if (!(await file.exists())) {
-        throw new Error(`Jelly config file not found at ${this.jellyConfigPath}`);
+      // Ensure dependencies objects exist
+      if (!config.dependencies) {
+        config.dependencies = {};
+      }
+      if (!config.devDependencies) {
+        config.devDependencies = {};
       }
 
-      try {
-        const config = await file.json() as JellyConfig;
-        
-        // Ensure dependencies objects exist
-        if (!config.dependencies) {
-          config.dependencies = {};
-        }
-        if (!config.devDependencies) {
-          config.devDependencies = {};
-        }
-
-        return config;
-      } catch (error) {
-        throw new Error(`Failed to read jelly config: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    } else {
-      // Fallback to Node.js fs for compatibility
-      if (!fsNative.existsSync(this.jellyConfigPath)) {
-        throw new Error(`Jelly config file not found at ${this.jellyConfigPath}`);
-      }
-
-      try {
-        const content = fsNative.readFileSync(this.jellyConfigPath, 'utf-8');
-        const config = JSON.parse(content) as JellyConfig;
-        
-        // Ensure dependencies objects exist
-        if (!config.dependencies) {
-          config.dependencies = {};
-        }
-        if (!config.devDependencies) {
-          config.devDependencies = {};
-        }
-
-        return config;
-      } catch (error) {
-        throw new Error(`Failed to read jelly config: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      return config;
+    } catch (error) {
+      throw new Error(`Failed to read jelly config: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -133,14 +89,7 @@ export class ProjectManager {
       
       // Write with proper formatting
       const content = JSON.stringify(config, null, 2);
-      
-      // Use Bun's optimized file API if available, fallback to Node.js fs
-      if (typeof Bun !== 'undefined' && Bun.write) {
-        await Bun.write(this.jellyConfigPath, content);
-      } else {
-        // Fallback to fs-extra for Node.js compatibility
-        await fs.writeFile(this.jellyConfigPath, content, 'utf-8');
-      }
+      await fs.writeFile(this.jellyConfigPath, content, 'utf-8');
     } catch (error) {
       throw new Error(`Failed to write jelly config: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -260,13 +209,6 @@ export class ProjectManager {
   }
 
   async jellyConfigExists(): Promise<boolean> {
-    // Use Bun's optimized file API if available, fallback to Node.js fs
-    if (typeof Bun !== 'undefined' && Bun.file) {
-      const file = Bun.file(this.jellyConfigPath);
-      return await file.exists();
-    } else {
-      // Fallback to Node.js fs for compatibility
-      return fsNative.existsSync(this.jellyConfigPath);
-    }
+    return fs.existsSync(this.jellyConfigPath);
   }
 }

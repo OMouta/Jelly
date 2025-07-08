@@ -25,10 +25,10 @@
     "build:linux": "npm run build && pkg . --targets node18-linux-x64 --out-path binaries",
     "build:windows": "npm run build && pkg . --targets node18-win-x64 --out-path binaries",
     "build:mac": "npm run build && pkg . --targets node18-macos-x64 --out-path binaries",
-    "bun:build": "bun build --compile --minify --sourcemap ./src/bin/jelly.ts --outfile jelly",
-    "bun:build:linux": "bun build --compile --minify --sourcemap --target=bun-linux-x64 ./src/bin/jelly.ts --outfile jelly-linux",
-    "bun:build:windows": "bun build --compile --minify --sourcemap --target=bun-windows-x64 ./src/bin/jelly.ts --outfile jelly.exe",
-    "bun:build:mac": "bun build --compile --minify --sourcemap --target=bun-darwin-x64 ./src/bin/jelly.ts --outfile jelly-macos"
+    "bun:build": "bun build --compile --minify --sourcemap --bytecode ./src/bin/jelly.ts --outfile jelly",
+    "bun:build:linux": "bun build --compile --minify --sourcemap --bytecode --target=bun-linux-x64 ./src/bin/jelly.ts --outfile jelly-linux",
+    "bun:build:windows": "bun build --compile --minify --sourcemap --bytecode --target=bun-windows-x64 ./src/bin/jelly.ts --outfile jelly.exe",
+    "bun:build:mac": "bun build --compile --minify --sourcemap --bytecode --target=bun-darwin-x64 ./src/bin/jelly.ts --outfile jelly-macos"
   },
   "files": [
     "dist/**/*"

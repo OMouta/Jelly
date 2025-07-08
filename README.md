@@ -344,6 +344,29 @@ jelly remove roblox/roact
 | Space Efficiency | Downloads everything | pnpm-like optimization |
 | Rojo Integration | Requires manual setup | Keeps project.json clean |
 
+## Why JavaScript?
+
+You might be wondering: "Why JavaScript instead of Rust?" Great question! Here's my take:
+
+### Development Speed > Execution Speed
+
+While Rust would certainly give us blazing-fast performance, JavaScript allows us to:
+
+- 🚀 **Ship features faster** - More time building cool stuff, less time fighting the borrow checker
+- 🔧 **Fix bugs quicker** - Rapid iteration means faster bug fixes and improvements
+- 🎯 **Focus on UX** - Spend time on the features that matter to developers
+- 🌐 **Leverage ecosystem** - Massive npm ecosystem with battle-tested libraries
+
+### Performance Reality Check
+
+Let's be honest - Jelly is primarily doing:
+
+- HTTP requests to Wally registry
+- File I/O operations
+- ZIP extraction and cleanup
+
+The bottleneck is network and disk I/O, not CPU. JavaScript is more than fast enough for these tasks and Jelly is still faster than python!
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

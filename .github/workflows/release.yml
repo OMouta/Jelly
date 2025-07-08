@@ -15,16 +15,16 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
       with:
-        node-version: '22'
+        bun-version: latest
     
     - name: Install dependencies
-      run: npm i
+      run: bun install
     
-    - name: Build
-      run: npm run build
+    - name: Build TypeScript
+      run: bun run build
     
     - name: Build binaries
       run: |
@@ -32,23 +32,19 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/v}
         echo "Version: $VERSION"
         
-        # Build each platform separately and rename immediately to avoid conflicts
+        # Create binaries directory
+        mkdir -p binaries
+        
+        # Build each platform with Bun's --compile flag
         
         # Build Linux
-        npm run build:linux
-        cd binaries
-        mv jelly jelly-linux
-        cd ..
+        bun build --compile --minify --sourcemap --bytecode --target=bun-linux-x64 ./src/bin/jelly.ts --outfile ./binaries/jelly-linux
         
         # Build Windows  
-        npm run build:windows
-        # Windows creates jelly.exe, no need to rename yet
+        bun build --compile --minify --sourcemap --bytecode --target=bun-windows-x64 ./src/bin/jelly.ts --outfile ./binaries/jelly.exe
         
         # Build macOS
-        npm run build:mac
-        cd binaries
-        mv jelly jelly-macos  # Rename immediately to avoid overwriting Linux
-        cd ..
+        bun build --compile --minify --sourcemap --bytecode --target=bun-darwin-x64 ./src/bin/jelly.ts --outfile ./binaries/jelly-macos
         
         # List what we have
         ls -la binaries/

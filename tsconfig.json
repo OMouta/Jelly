@@ -13,7 +13,7 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "bun"]
   },
   "include": [
     "src/**/*"

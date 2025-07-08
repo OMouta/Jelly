@@ -365,7 +365,7 @@ Let's be honest - Jelly is primarily doing:
 - File I/O operations
 - ZIP extraction and cleanup
 
-The bottleneck is network and disk I/O, not CPU. JavaScript is more than fast enough for these tasks and Jelly is still faster than python!
+The bottleneck is network and disk I/O, not CPU. JavaScript is more than fast enough for these tasks, at least we are using bun.
 
 ## Contributing
 

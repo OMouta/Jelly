@@ -12,8 +12,18 @@ export interface JellyConfig {
   name: string;
   version: string;
   description?: string;
+  license?: string;
+  authors?: string[];
+  realm?: 'shared' | 'server' | 'development';
+  registry?: string;
+  homepage?: string;
+  repository?: string;
+  exclude?: string[];
+  include?: string[];
+  private?: boolean;
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
+  serverDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
   workspaces?: string[] | {
     packages: string[];
@@ -74,6 +84,7 @@ export interface InstallOptions {
 
 export interface InitOptions {
   name?: string;
+  description?: string;
 }
 
 export interface LockfileEntry {
@@ -104,4 +115,64 @@ export interface WorkspaceOptions {
   recursive?: boolean;
   filter?: string[];
   exclude?: string[];
+}
+
+export interface PublishOptions {
+  token?: string;
+  registry?: string;
+  dryRun?: boolean;
+}
+
+export interface AuthTokenStore {
+  token: string;
+  expiresAt?: number;
+}
+
+export interface RegistryTokenStore {
+  tokens: Record<string, AuthTokenStore>;
+}
+
+export interface RegistryConfig {
+  api: string;
+  api_url: string;
+  github_oauth_id: string;
+}
+
+export interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
+}
+
+export interface AccessTokenResponse {
+  access_token: string;
+  token_type: string;
+  scope: string;
+  error?: string;
+  error_description?: string;
+}
+
+export interface WallyManifest {
+  package: {
+    name: string;
+    version: string;
+    registry?: string;
+    realm?: 'shared' | 'server' | 'development';
+    description?: string;
+    license?: string;
+    authors?: string[];
+    repository?: string;
+    homepage?: string;
+    private?: boolean;
+    exclude?: string[];
+  };
+  dependencies?: Record<string, any>;
+  'server-dependencies'?: Record<string, any>;
+  'dev-dependencies'?: Record<string, any>;
+  place?: {
+    shared_packages?: string;
+    server_packages?: string;
+  };
 }

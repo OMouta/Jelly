@@ -104,6 +104,7 @@ We welcome the following types of contributions:
 ### Creating a Pull Request
 
 1. **Create a feature branch** from `main`:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```

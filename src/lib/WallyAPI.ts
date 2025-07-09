@@ -1,16 +1,26 @@
 import { WallySearchResult, WallyPackageInfo, WallyPackage } from '../types';
 
+// Common HTTP headers for Jelly requests
+export const HTTP_HEADERS = {
+  'User-Agent': 'jelly-cli/0.3.0',
+  'Accept': 'application/json',
+  'Content-Type': 'application/json'
+} as const;
+
+// Headers for package downloads
+export const DOWNLOAD_HEADERS = {
+  'User-Agent': 'jelly-cli/0.3.0',
+  'Accept': 'application/zip',
+  'Wally-Version': '0.3.2'
+} as const;
+
 export class WallyAPI {
   private static readonly BASE_URL = 'https://api.wally.run';
 
   static async searchPackages(query: string): Promise<WallySearchResult[]> {
     try {
       const response = await fetch(`${this.BASE_URL}/v1/package-search?query=${encodeURIComponent(query)}`, {
-        headers: {
-          'User-Agent': 'jelly-cli/0.0.1',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+        headers: HTTP_HEADERS
       });
       
       if (!response.ok) {
@@ -27,11 +37,7 @@ export class WallyAPI {
   static async getPackageInfo(scope: string, name: string): Promise<WallyPackageInfo> {
     try {
       const response = await fetch(`${this.BASE_URL}/v1/package-metadata/${scope}/${name}`, {
-        headers: {
-          'User-Agent': 'jelly-cli/0.0.1',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+        headers: HTTP_HEADERS
       });
       
       if (!response.ok) {

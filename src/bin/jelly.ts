@@ -4,7 +4,9 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import figlet from 'figlet';
 import { JellyManager } from '../lib/JellyManager';
-import { InstallOptions, InitOptions } from '../types';
+import { AuthManager } from '../lib/AuthManager';
+import { PublishManager } from '../lib/PublishManager';
+import { InstallOptions, InitOptions, PublishOptions } from '../types';
 import { version } from '../../package.json';
 
 const program = new Command();
@@ -137,17 +139,17 @@ program
 
 program
   .command('init')
-  .description('Initialize a new Rojo project with Jelly support')
+  .description('Initialize Jelly package management in current directory')
   .option('-n, --name <name>', 'Project name')
   .option('-d, --description <desc>', 'Project description')
   .action(async (options: InitOptions) => {
     const jelly = new JellyManager();
     try {
-      console.log(chalk.cyan('🪼 ') + chalk.bold('Initializing new Jelly project...'));
+      console.log(chalk.cyan('🪼 ') + chalk.bold('Initializing Jelly in current directory...'));
       await jelly.init(options);
-      console.log(chalk.green('✨ Project initialized! Welcome to the Jelly ecosystem! 🪼'));
+      console.log(chalk.green('✨ Jelly initialized! Welcome to the Jelly ecosystem! 🪼'));
     } catch (error) {
-      console.error(chalk.red('💥 Failed to initialize project:'), (error as Error).message);
+      console.error(chalk.red('💥 Failed to initialize Jelly:'), (error as Error).message);
       process.exit(1);
     }
   });
@@ -427,6 +429,86 @@ program
       await jelly.analyzeDependencies();
     } catch (error) {
       console.error(chalk.red('💥 Failed to analyze dependencies:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('login')
+  .description('Login to Wally registry using GitHub OAuth')
+  .option('-t, --token <token>', 'Use a specific token instead of OAuth flow')
+  .option('-r, --registry <url>', 'Registry GitHub repository (default: https://github.com/UpliftGames/wally-index)')
+  .action(async (options) => {
+    const authManager = new AuthManager();
+    try {
+      console.log(chalk.cyan('🪼 ') + chalk.bold('Logging in to Wally...'));
+      await authManager.login(options.token, options.registry);
+    } catch (error) {
+      console.error(chalk.red('💥 Login failed:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('logout')
+  .description('Logout from Wally registry')
+  .option('-r, --registry <url>', 'Registry GitHub repository (default: https://github.com/UpliftGames/wally-index)')
+  .action(async (options) => {
+    const authManager = new AuthManager();
+    try {
+      await authManager.logout(options.registry);
+    } catch (error) {
+      console.error(chalk.red('💥 Logout failed:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('publish')
+  .description('Publish package to Wally registry')
+  .option('-t, --token <token>', 'Authentication token (overrides stored token)')
+  .option('-r, --registry <url>', 'Registry GitHub repository (default: https://github.com/UpliftGames/wally-index)')
+  .option('--dry-run', 'Perform a dry run without actually publishing')
+  .action(async (options: PublishOptions) => {
+    const publishManager = new PublishManager();
+    try {
+      console.log(chalk.cyan('🪼 ') + chalk.bold('Publishing package...'));
+      await publishManager.publish(options);
+    } catch (error) {
+      console.error(chalk.red('💥 Publishing failed:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('package')
+  .description('Create a package archive without publishing')
+  .option('-o, --output <path>', 'Output path for the package archive')
+  .option('--list', 'List files that would be included in the package')
+  .action(async (options: { output?: string; list?: boolean }) => {
+    const publishManager = new PublishManager();
+    try {
+      if (options.list) {
+        console.log(chalk.cyan('🪼 ') + chalk.bold('Listing package contents...'));
+      } else {
+        console.log(chalk.cyan('🪼 ') + chalk.bold('Creating package archive...'));
+      }
+      await publishManager.package(options);
+    } catch (error) {
+      console.error(chalk.red('💥 Package creation failed:'), (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('manifest-to-json')
+  .description('Convert jelly.json to Wally manifest format (JSON)')
+  .action(async () => {
+    const publishManager = new PublishManager();
+    try {
+      await publishManager.manifestToJson();
+    } catch (error) {
+      console.error(chalk.red('💥 Manifest conversion failed:'), (error as Error).message);
       process.exit(1);
     }
   });

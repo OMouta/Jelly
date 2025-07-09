@@ -226,27 +226,32 @@ export class JellyManager {
   }
 
   async init(options: InitOptions = {}): Promise<void> {
-    const spinner = ora('Initializing project...').start();
+    const spinner = ora('Initializing Jelly project...').start();
 
     try {
-      if (await this.projectManager.projectExists()) {
-        spinner.warn('Project already exists!');
+      if (await this.projectManager.jellyConfigExists()) {
+        spinner.warn('Jelly project already exists! (jelly.json found)');
         return;
       }
 
-      await this.projectManager.createProject(options);
-      spinner.succeed('Project initialized successfully!');
+      await this.projectManager.createJellyConfig(options);
+      spinner.succeed('Jelly project initialized successfully!');
       
-      console.log(chalk.cyan('\n🪼 Created files:'));
-      console.log(chalk.blue('  → default.project.json') + chalk.gray(' (Rojo project configuration)'));
+      console.log(chalk.cyan('\n🪼 Created file:'));
       console.log(chalk.blue('  → jelly.json') + chalk.gray(' (Jelly dependencies and scripts)'));
-      console.log(chalk.blue('  → src/') + chalk.gray(' (Source code directory)'));
       console.log(chalk.gray('\nNext steps:'));
       console.log(chalk.gray('  → Add packages: ') + chalk.cyan('jelly add <package>'));
       console.log(chalk.gray('  → Install dependencies: ') + chalk.cyan('jelly install'));
       console.log(chalk.gray('  → Run scripts: ') + chalk.cyan('jelly run <script>'));
       console.log(chalk.gray('  → List scripts: ') + chalk.cyan('jelly scripts'));
-      console.log(chalk.gray('  → Build with Rojo: ') + chalk.cyan('jelly run build'));
+      
+      // Check if Rojo project exists and give relevant advice
+      if (await this.projectManager.projectExists()) {
+        console.log(chalk.gray('  → Build with Rojo: ') + chalk.cyan('jelly run build'));
+      } else {
+        console.log(chalk.gray('  → Initialize Rojo: ') + chalk.cyan('rojo init'));
+        console.log(chalk.gray('  → Then build: ') + chalk.cyan('jelly run build'));
+      }
     } catch (error) {
       spinner.fail('Initialization failed');
       throw error;
@@ -616,7 +621,8 @@ export class JellyManager {
       const config = await this.projectManager.readJellyConfig();
       const allDeps = {
         ...config.dependencies,
-        ...config.devDependencies
+        ...config.devDependencies,
+        ...(config.serverDependencies || {})
       };
 
       const packagesPath = this.packageDownloader.getPackagesPath();
@@ -628,42 +634,102 @@ export class JellyManager {
         return;
       }
 
-      const installedPackages = fs.readdirSync(packagesPath, { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name)
-        .filter(name => name !== 'init.lua'); // Exclude the index file
+      // Get list of dependencies that should exist
+      const expectedPackages = new Set<string>();
+      for (const depName of Object.keys(allDeps)) {
+        const parsed = WallyAPI.parsePackageName(depName);
+        expectedPackages.add(`${parsed.scope}_${parsed.name}`); // Package directory name
+        expectedPackages.add(parsed.name); // Alias file name (without .lua extension)
+      }
 
       const unusedPackages: string[] = [];
+      const unusedAliases: string[] = [];
 
-      for (const installedPkg of installedPackages) {
-        // Check if this package is in dependencies
-        const isInDeps = Object.keys(allDeps).some(depName => {
-          const parsed = WallyAPI.parsePackageName(depName);
-          return `${parsed.scope}_${parsed.name}` === installedPkg || parsed.name === installedPkg;
-        });
+      // Check for unused packages in _Index directory
+      const indexPath = path.join(packagesPath, '_Index');
+      if (fs.existsSync(indexPath)) {
+        const indexPackages = fs.readdirSync(indexPath, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory())
+          .map(dirent => dirent.name);
 
-        if (!isInDeps) {
+        for (const installedPkg of indexPackages) {
+          if (!expectedPackages.has(installedPkg)) {
+            unusedPackages.push(installedPkg);
+          }
+        }
+      }
+
+      // Check for unused packages in root directory (old structure)
+      const rootItems = fs.readdirSync(packagesPath, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name)
+        .filter(name => name !== '_Index'); // Exclude _Index directory
+
+      for (const installedPkg of rootItems) {
+        if (!expectedPackages.has(installedPkg)) {
           unusedPackages.push(installedPkg);
         }
       }
 
-      if (unusedPackages.length === 0) {
+      // Check for unused alias files
+      const aliasFiles = fs.readdirSync(packagesPath, { withFileTypes: true })
+        .filter(dirent => dirent.isFile() && dirent.name.endsWith('.lua'))
+        .map(dirent => dirent.name.replace('.lua', ''));
+
+      for (const aliasName of aliasFiles) {
+        // Check if this alias corresponds to a current dependency
+        const isNeeded = Object.keys(allDeps).some(depName => {
+          const parsed = WallyAPI.parsePackageName(depName);
+          return parsed.name === aliasName;
+        });
+
+        if (!isNeeded) {
+          unusedAliases.push(aliasName);
+        }
+      }
+
+      const totalUnused = unusedPackages.length + unusedAliases.length;
+
+      if (totalUnused === 0) {
         spinner.succeed('No unused packages found!');
         return;
       }
 
-      spinner.text = `Removing ${unusedPackages.length} unused package(s)...`;
+      spinner.text = `Removing ${totalUnused} unused item(s)...`;
 
+      // Remove unused packages from _Index
       for (const unusedPkg of unusedPackages) {
-        const packagePath = path.join(packagesPath, unusedPkg);
-        fs.rmSync(packagePath, { recursive: true, force: true });
+        const packagePath = path.join(indexPath, unusedPkg);
+        if (fs.existsSync(packagePath)) {
+          fs.rmSync(packagePath, { recursive: true, force: true });
+        }
+        
+        // Also check and remove from root directory (old structure)
+        const oldPackagePath = path.join(packagesPath, unusedPkg);
+        if (fs.existsSync(oldPackagePath)) {
+          fs.rmSync(oldPackagePath, { recursive: true, force: true });
+        }
       }
 
-      // Regenerate package index
+      // Remove unused alias files
+      for (const unusedAlias of unusedAliases) {
+        const aliasPath = path.join(packagesPath, `${unusedAlias}.lua`);
+        if (fs.existsSync(aliasPath)) {
+          fs.unlinkSync(aliasPath);
+        }
+      }
+
+      // Regenerate package index to ensure consistency
       await this.packageDownloader.generatePackageIndex();
 
-      spinner.succeed(`Cleaned ${unusedPackages.length} unused package(s)!`);
-      console.log(chalk.gray(`Removed: ${unusedPackages.join(', ')}`));
+      spinner.succeed(`Cleaned ${totalUnused} unused item(s)!`);
+      
+      if (unusedPackages.length > 0) {
+        console.log(chalk.gray(`Removed packages: ${unusedPackages.join(', ')}`));
+      }
+      if (unusedAliases.length > 0) {
+        console.log(chalk.gray(`Removed aliases: ${unusedAliases.map(a => a + '.lua').join(', ')}`));
+      }
     } catch (error) {
       spinner.fail('Clean failed');
       throw error;

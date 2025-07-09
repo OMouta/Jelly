@@ -1,6 +1,10 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { RojoProject, JellyConfig } from '../types';
+
+const execAsync = promisify(exec);
 
 export class ProjectManager {
   private projectPath: string;
@@ -116,8 +120,9 @@ export class ProjectManager {
     await this.writeJellyConfig(config);
   }
 
-  async createProject(options: { name?: string } = {}): Promise<void> {
-    const projectName = options.name || path.basename(this.projectPath);
+  async createProject(options: { name?: string; description?: string } = {}): Promise<void> {
+    const projectName = options.name || await this.getProjectName();
+    const authorInfo = await this.getGitAuthor();
     
     // Create clean Rojo project file
     const rojoProject: RojoProject = {
@@ -151,7 +156,10 @@ export class ProjectManager {
     const jellyConfig: JellyConfig = {
       name: projectName,
       version: "0.1.0",
-      description: `A Roblox project created with Jelly`,
+      description: options.description || `A Roblox project created with Jelly`,
+      license: "MIT",
+      authors: [authorInfo],
+      realm: "shared",
       dependencies: {},
       devDependencies: {},
       scripts: {
@@ -190,6 +198,88 @@ export class ProjectManager {
     // Write both config files
     await this.writeProject(rojoProject);
     await this.writeJellyConfig(jellyConfig);
+  }
+
+  async createJellyConfig(options: { name?: string; description?: string } = {}): Promise<void> {
+    const projectName = options.name || await this.getProjectName();
+    const authorInfo = await this.getGitAuthor();
+    
+    // Create Jelly config file only
+    const jellyConfig: JellyConfig = {
+      name: projectName,
+      version: "0.1.0",
+      description: options.description || `A Roblox project managed with Jelly`,
+      license: "MIT",
+      authors: [authorInfo],
+      realm: "shared",
+      include: [
+        "README.md",
+        "src/**",
+        "default.project.json",
+        "jelly.json"
+      ],
+      exclude: [],
+      dependencies: {},
+      devDependencies: {},
+      scripts: {
+        "build": "rojo build",
+        "serve": "rojo serve",
+        "build:release": "rojo build --output game.rbxl"
+      },
+      jelly: {
+        cleanup: true,
+        optimize: true,
+        packagesPath: "Packages"
+      }
+    };
+
+    await this.writeJellyConfig(jellyConfig);
+  }
+
+  /**
+   * Get author information from git config
+   */
+  private async getGitAuthor(): Promise<string> {
+    try {
+      const { stdout: name } = await execAsync('git config user.name');
+      const { stdout: email } = await execAsync('git config user.email');
+      
+      const authorName = name.trim();
+      const authorEmail = email.trim();
+      
+      if (authorName && authorEmail) {
+        return `${authorName} <${authorEmail}>`;
+      } else if (authorName) {
+        return authorName;
+      } else {
+        return 'Unknown Author';
+      }
+    } catch (error) {
+      // Git not available or not configured
+      return 'Unknown Author';
+    }
+  }
+
+  /**
+   * Get project name from directory or git config
+   */
+  private async getProjectName(): Promise<string> {
+    try {
+      // Try to get GitHub username from git config
+      const { stdout: remoteUrl } = await execAsync('git config remote.origin.url');
+      const match = remoteUrl.match(/github\.com[:/]([^/]+)\//);
+      if (match) {
+        const username = match[1];
+        const dirName = path.basename(this.projectPath);
+        return `${username}/${dirName.toLowerCase()}`;
+      }
+    } catch (error) {
+      // Git not available or no remote configured
+    }
+    
+    // Fallback to directory name
+    const dirName = path.basename(this.projectPath);
+    return `yourname/${dirName.toLowerCase()}`;
   }
 
   getProjectPath(): string {

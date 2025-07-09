@@ -1,6 +1,6 @@
 {
   "name": "@omouta/jelly",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A modern package manager for Roblox, built on top of Wally",
   "author": "OMouta",
   "license": "MIT",

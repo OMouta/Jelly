@@ -1,10 +1,10 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import chalk from 'chalk';
 import ora from 'ora';
 import { HTTP_HEADERS } from './WallyAPI';
-import { DeviceCodeResponse, AccessTokenResponse, RegistryTokenStore, RegistryConfig, AuthTokenStore } from '../types';
+import { DeviceCodeResponse, AccessTokenResponse, RegistryTokenStore, RegistryConfig, AuthTokenStore } from '../../types';
+import { Output } from '../utils/Output';
 
 export class AuthManager {
   private static readonly DEFAULT_REGISTRY = 'https://github.com/UpliftGames/wally-index';
@@ -21,7 +21,7 @@ export class AuthManager {
     if (token) {
       // Direct token provided
       await this.storeToken(token, targetRegistry);
-      console.log(chalk.green(`✨ Token stored successfully for ${targetRegistry}!`));
+      Output.success(`Token stored successfully for ${targetRegistry}!`);
       return;
     }
 
@@ -35,8 +35,9 @@ export class AuthManager {
       // Check if we're using fallback config and show warning
       if (config.github_oauth_id === AuthManager.FALLBACK_CLIENT_ID) {
         spinner.stop();
-        console.log(chalk.yellow('⚠️  Warning: Could not fetch registry configuration from GitHub'));
-        console.log(chalk.yellow('    Using fallback GitHub OAuth client ID\n'));
+        Output.warning('Could not fetch registry configuration from GitHub');
+        Output.info('Using fallback GitHub OAuth client ID');
+        Output.newLine();
         spinner.start('Requesting device authorization...');
       } else {
         spinner.text = 'Requesting device authorization...';
@@ -47,12 +48,9 @@ export class AuthManager {
 
       spinner.stop();
       
-      // Step 3: Show user instructions
-      console.log(chalk.blue('\n🔐 Authentication Required'));
-      console.log(chalk.bold('Registry:'), chalk.cyan(targetRegistry));
-      console.log(chalk.bold('Please visit:'), chalk.cyan(deviceResponse.verification_uri));
-      console.log(chalk.bold('And enter the code:'), chalk.yellow(deviceResponse.user_code));
-      console.log(chalk.gray('Waiting for authorization...\n'));
+      // Step 3: Show user instructions with our professional interface
+      Output.authStart(targetRegistry);
+      Output.authCode(deviceResponse.verification_uri, deviceResponse.user_code);
 
       // Step 4: Poll for access token
       const spinner2 = ora('Waiting for authorization...').start();
@@ -62,7 +60,7 @@ export class AuthManager {
       await this.storeToken(accessToken, targetRegistry);
       
       spinner2.succeed(`Authentication successful for ${targetRegistry}!`);
-      console.log(chalk.green('✨ You are now logged in!'));
+      Output.success('You are now logged in!');
     } catch (error) {
       spinner.fail('Authentication failed');
       throw error;
@@ -82,12 +80,12 @@ export class AuthManager {
         if (tokenStore.tokens[targetRegistry]) {
           delete tokenStore.tokens[targetRegistry];
           await this.writeTokenStore(tokenStore);
-          console.log(chalk.green(`✨ Successfully logged out from ${targetRegistry}!`));
+          Output.success(`Successfully logged out from ${targetRegistry}!`);
         } else {
-          console.log(chalk.yellow(`⚠️  You are not currently logged in to ${targetRegistry}.`));
+          Output.warning(`You are not currently logged in to ${targetRegistry}.`);
         }
       } else {
-        console.log(chalk.yellow('⚠️  You are not currently logged in to any registry.'));
+        Output.warning('You are not currently logged in to any registry.');
       }
     } catch (error) {
       throw new Error(`Failed to logout: ${error instanceof Error ? error.message : 'Unknown error'}`);

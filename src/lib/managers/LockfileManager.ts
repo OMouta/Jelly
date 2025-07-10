@@ -1,6 +1,6 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { JellyLockfile, LockfileEntry, JellyConfig } from '../types';
+import { JellyLockfile, LockfileEntry, JellyConfig } from '../../types';
 import { WallyAPI } from './WallyAPI';
 import { VersionResolver, DependencyConflict } from './VersionResolver';
 

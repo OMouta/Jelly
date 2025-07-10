@@ -1,6 +1,6 @@
 import * as semver from 'semver';
 import { WallyAPI } from './WallyAPI';
-import { WallyPackageInfo } from '../types';
+import { WallyPackageInfo } from '../../types';
 
 export interface ResolvedVersion {
   version: string;

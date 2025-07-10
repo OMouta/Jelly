@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { WallyAPI, HTTP_HEADERS, DOWNLOAD_HEADERS } from './WallyAPI';
-import { LockfileEntry } from '../types';
+import { LockfileEntry, JellyConfig } from '../../types';
 
 export interface PackageDownloadInfo {
   scope: string;
@@ -13,16 +13,38 @@ export interface PackageDownloadInfo {
 export class PackageDownloader {
   private projectPath: string;
   private packagesDir: string;
+  private config: JellyConfig | null = null;
 
   constructor(projectPath: string = process.cwd()) {
     this.projectPath = projectPath;
+    // Will be set dynamically when config is loaded
     this.packagesDir = path.join(projectPath, 'Packages');
+  }
+
+  private async loadConfig(): Promise<void> {
+    if (this.config) return; // Already loaded
+
+    const configPath = path.join(this.projectPath, 'jelly.json');
+    if (await fs.pathExists(configPath)) {
+      try {
+        this.config = await fs.readJson(configPath);
+        // Update packages directory based on config
+        const packagesPath = this.config?.jelly?.packagesPath || 'Packages';
+        this.packagesDir = path.join(this.projectPath, packagesPath);
+      } catch (error) {
+        console.warn(`Warning: Could not parse jelly.json: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        this.config = null;
+      }
+    }
   }
 
   async downloadPackage(scope: string, name: string, version: string): Promise<void> {
     const downloadUrl = `https://api.wally.run/v1/package-contents/${scope}/${name}/${version}`;
     
     try {
+      // Load config to get packages path and optimization settings
+      await this.loadConfig();
+      
       // Create packages directory structure
       await fs.ensureDir(this.packagesDir);
       
@@ -60,6 +82,9 @@ export class PackageDownloader {
 
   async downloadFromLockfile(lockfileEntry: LockfileEntry, scope: string, name: string): Promise<void> {
     try {
+      // Load config to get packages path and optimization settings
+      await this.loadConfig();
+      
       // Create packages directory structure
       await fs.ensureDir(this.packagesDir);
       
@@ -109,6 +134,15 @@ export class PackageDownloader {
   }
 
   private async processExtractedPackage(packageDir: string, scope: string, name: string): Promise<void> {
+    // Check configuration options
+    const shouldOptimize = this.config?.jelly?.optimize !== false; // Default to true
+    const shouldCleanup = this.config?.jelly?.cleanup !== false;   // Default to true
+
+    if (!shouldOptimize && !shouldCleanup) {
+      console.log(`\n   🪼 Skipping optimization and cleanup for ${scope}/${name} (disabled in config)`);
+      return;
+    }
+
     // Check if there's a default.project.json to determine the main module path
     const projectJsonPath = path.join(packageDir, 'default.project.json');
     let mainModulePath = '';
@@ -126,8 +160,8 @@ export class PackageDownloader {
       }
     }
     
-    // If we found a main module path, reorganize the package
-    if (mainModulePath) {
+    // Structure optimization (only if optimize is enabled)
+    if (shouldOptimize && mainModulePath) {
       const mainModuleSource = path.join(packageDir, mainModulePath);
       const tempDir = path.join(packageDir, '_temp');
       
@@ -152,9 +186,9 @@ export class PackageDownloader {
         // Remove the temp directory
         await fs.remove(tempDir);
         
-        console.log(`\n   📁 Cleaned up ${scope}/${name} (main module: ${mainModulePath})`);
+        console.log(`\n   📁 Optimized structure for ${scope}/${name} (main module: ${mainModulePath})`);
       }
-    } else {
+    } else if (shouldOptimize) {
       // Check if there's already an init.lua or init.luau at the root
       const hasInit = await fs.pathExists(path.join(packageDir, 'init.lua')) || 
                      await fs.pathExists(path.join(packageDir, 'init.luau'));
@@ -173,11 +207,13 @@ export class PackageDownloader {
             path.join(packageDir, moduleFile), 
             path.join(packageDir, 'init.lua')
           );
-          console.log(`\n   📁 Renamed ${moduleFile} to init.lua for ${scope}/${name}`);
+          console.log(`\n   📁 Optimized: Renamed ${moduleFile} to init.lua for ${scope}/${name}`);
         }
       }
-      
-      // Clean up common unnecessary files
+    }
+
+    // Cleanup unnecessary files (only if cleanup is enabled)
+    if (shouldCleanup) {
       const unnecessaryFiles = [
         'README.md', 'README.txt', 'LICENSE', 'LICENSE.txt', 'LICENSE.md',
         '.gitignore', '.gitattributes', '.github', '.git',
@@ -187,16 +223,33 @@ export class PackageDownloader {
         '.travis.yml', '.vscode', 'rotriever.toml'
       ];
       
+      let cleanedFiles = 0;
       for (const file of unnecessaryFiles) {
         const filePath = path.join(packageDir, file);
         if (await fs.pathExists(filePath)) {
           await fs.remove(filePath);
+          cleanedFiles++;
         }
       }
+      
+      if (cleanedFiles > 0) {
+        console.log(`\n   🧹 Cleaned up ${cleanedFiles} unnecessary files from ${scope}/${name}`);
+      }
     }
+
+    // Show summary of what was done
+    const actions = [];
+    if (shouldOptimize) actions.push('optimized');
+    if (shouldCleanup) actions.push('cleaned');
+    if (actions.length === 0) actions.push('processed');
+    
+    console.log(`\n   ✨ Successfully ${actions.join(' and ')} ${scope}/${name}`);
   }
 
   async generatePackageIndex(): Promise<void> {
+    // Load config to ensure we have the correct packages path
+    await this.loadConfig();
+    
     // Generate Wally-compatible package structure
     const packages = await this.getInstalledPackages();
     
@@ -390,7 +443,8 @@ export class PackageDownloader {
     await projectManager.writeProject(project);
   }
 
-  getPackagesPath(): string {
+  async getPackagesPath(): Promise<string> {
+    await this.loadConfig();
     return this.packagesDir;
   }
 

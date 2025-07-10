@@ -1,4 +1,4 @@
-import { WallySearchResult, WallyPackageInfo, WallyPackage } from '../types';
+import { WallySearchResult, WallyPackageInfo, WallyPackage } from '../../types';
 
 // Common HTTP headers for Jelly requests
 export const HTTP_HEADERS = {

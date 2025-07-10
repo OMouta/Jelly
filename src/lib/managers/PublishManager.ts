@@ -6,7 +6,7 @@ import archiver from 'archiver';
 import { minimatch } from 'minimatch';
 import { AuthManager } from './AuthManager';
 import { ProjectManager } from './ProjectManager';
-import { PublishOptions, WallyManifest, JellyConfig } from '../types';
+import { PublishOptions, WallyManifest, JellyConfig } from '../../types';
 
 export class PublishManager {
   private projectManager: ProjectManager;

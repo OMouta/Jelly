@@ -2,7 +2,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { RojoProject, JellyConfig } from '../types';
+import { RojoProject, JellyConfig } from '../../types';
 
 const execAsync = promisify(exec);
 

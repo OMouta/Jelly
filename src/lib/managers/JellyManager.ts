@@ -1,25 +1,22 @@
-import chalk from 'chalk';
 import ora from 'ora';
 import { ProjectManager } from './ProjectManager';
 import { WallyAPI } from './WallyAPI';
 import { PackageDownloader } from './PackageDownloader';
 import { LockfileManager } from './LockfileManager';
-import { WorkspaceManager } from './WorkspaceManager';
 import { VersionResolver, DependencyConflict } from './VersionResolver';
-import { InstallOptions, InitOptions, LockfileEntry } from '../types';
+import { InstallOptions, InitOptions, LockfileEntry } from '../../types';
+import { Output } from '../utils/Output';
 
 export class JellyManager {
   private projectManager: ProjectManager;
   private packageDownloader: PackageDownloader;
   private lockfileManager: LockfileManager;
-  private workspaceManager: WorkspaceManager;
   private versionResolver: VersionResolver;
 
   constructor(projectPath?: string) {
     this.projectManager = new ProjectManager(projectPath);
     this.packageDownloader = new PackageDownloader(projectPath);
     this.lockfileManager = new LockfileManager(projectPath);
-    this.workspaceManager = new WorkspaceManager(projectPath);
     this.versionResolver = new VersionResolver();
   }
 
@@ -76,8 +73,8 @@ export class JellyManager {
       await this.packageDownloader.updateProjectFile(this.projectManager);
 
       spinner.succeed('Packages installed successfully!');
-      console.log(chalk.blue(`📁 Packages installed to: ${this.packageDownloader.getPackagesPath()}`));
-      console.log(chalk.green(`📋 Lockfile updated: ${this.lockfileManager.getLockfilePath()}`));
+      Output.info(`Packages installed to: ${await this.packageDownloader.getPackagesPath()}`);
+      Output.info(`Lockfile updated: ${this.lockfileManager.getLockfilePath()}`);
       
       // Show outdated packages summary
       await this.showOutdatedSummary();
@@ -124,7 +121,7 @@ export class JellyManager {
         
         await this.lockfileManager.writeLockfile(lockfile);
         spinner.stop();
-        console.log(chalk.green('📋 Generated jelly-lock.json'));
+        Output.success('Generated jelly-lock.json');
         spinner.start();
       }
 
@@ -157,8 +154,8 @@ export class JellyManager {
       await this.packageDownloader.updateProjectFile(this.projectManager);
 
       spinner.succeed(`Successfully installed ${Object.keys(lockfile.packages).length} packages!`);
-      console.log(chalk.blue(`📁 Packages installed to: ${this.packageDownloader.getPackagesPath()}`));
-      console.log(chalk.green(`📋 Using lockfile: ${this.lockfileManager.getLockfilePath()}`));
+      Output.info(`Packages installed to: ${await this.packageDownloader.getPackagesPath()}`);
+      Output.info(`Using lockfile: ${this.lockfileManager.getLockfilePath()}`);
       
       // Show outdated packages summary
       await this.showOutdatedSummary();
@@ -202,7 +199,7 @@ export class JellyManager {
       spinner.stop();
       await this.clean();
 
-      console.log(chalk.green(`📋 Lockfile updated: ${this.lockfileManager.getLockfilePath()}`));
+      Output.info(`Lockfile updated: ${this.lockfileManager.getLockfilePath()}`);
     } catch (error) {
       spinner.fail('Removal failed');
       throw error;
@@ -212,17 +209,18 @@ export class JellyManager {
   private displayVersionConflicts(conflicts: DependencyConflict[]): void {
     if (conflicts.length === 0) return;
 
-    console.log(chalk.yellow('\n⚠️  Version conflicts detected:'));
+    Output.newLine();
+    Output.warning('Version conflicts detected:');
     for (const conflict of conflicts) {
-      console.log(chalk.yellow(`  ${conflict.packageName}:`));
+      Output.listItem(`${conflict.packageName}:`);
       for (const c of conflict.conflicts) {
-        console.log(chalk.gray(`    ${c.requiredBy} requires ${c.versionRange}`));
+        Output.listItem(`${c.requiredBy} requires ${c.versionRange}`);
       }
       if (conflict.resolvedVersion) {
-        console.log(chalk.green(`    → Resolved to ${conflict.resolvedVersion}`));
+        Output.listItem(`→ Resolved to ${conflict.resolvedVersion}`);
       }
     }
-    console.log();
+    Output.newLine();
   }
 
   async init(options: InitOptions = {}): Promise<void> {
@@ -237,20 +235,22 @@ export class JellyManager {
       await this.projectManager.createJellyConfig(options);
       spinner.succeed('Jelly project initialized successfully!');
       
-      console.log(chalk.cyan('\n🪼 Created file:'));
-      console.log(chalk.blue('  → jelly.json') + chalk.gray(' (Jelly dependencies and scripts)'));
-      console.log(chalk.gray('\nNext steps:'));
-      console.log(chalk.gray('  → Add packages: ') + chalk.cyan('jelly add <package>'));
-      console.log(chalk.gray('  → Install dependencies: ') + chalk.cyan('jelly install'));
-      console.log(chalk.gray('  → Run scripts: ') + chalk.cyan('jelly run <script>'));
-      console.log(chalk.gray('  → List scripts: ') + chalk.cyan('jelly scripts'));
+      Output.newLine();
+      Output.info('Created file:');
+      Output.listItem('jelly.json', 'Jelly dependencies and scripts');
+      Output.newLine();
+      Output.section('Next steps');
+      Output.usage('jelly add <package>', 'Add packages');
+      Output.usage('jelly install', 'Install dependencies');
+      Output.usage('jelly run <script>', 'Run scripts');
+      Output.usage('jelly scripts', 'List scripts');
       
       // Check if Rojo project exists and give relevant advice
       if (await this.projectManager.projectExists()) {
-        console.log(chalk.gray('  → Build with Rojo: ') + chalk.cyan('jelly run build'));
+        Output.usage('jelly run build', 'Build with Rojo');
       } else {
-        console.log(chalk.gray('  → Initialize Rojo: ') + chalk.cyan('rojo init'));
-        console.log(chalk.gray('  → Then build: ') + chalk.cyan('jelly run build'));
+        Output.usage('rojo init', 'Initialize Rojo');
+        Output.usage('jelly run build', 'Then build');
       }
     } catch (error) {
       spinner.fail('Initialization failed');
@@ -266,29 +266,27 @@ export class JellyManager {
       spinner.stop();
 
       if (results.length === 0) {
-        console.log(chalk.yellow('No packages found matching your query.'));
+        Output.warning('No packages found matching your query.');
         return;
       }
 
       const limit = options.limit || 10;
       const limitedResults = results.slice(0, limit);
       
-      console.log(chalk.cyan(`\n🪼 Found ${results.length} package(s)${results.length > limit ? `, showing top ${limit}` : ''}:\n`));
+      Output.newLine();
+      Output.info(`Found ${results.length} package(s)${results.length > limit ? `, showing top ${limit}` : ''}:`);
+      Output.newLine();
 
       for (const result of limitedResults) {
-        console.log(chalk.bold.cyan(`→ ${result.scope}/${result.name}`));
-        if (result.description) {
-          console.log(chalk.gray(`   ${result.description}`));
-        }
-        console.log(chalk.blue(`   Latest: ${result.versions[result.versions.length - 1]}`));
+        Output.packageInfo(`${result.scope}/${result.name}`, result.versions[result.versions.length - 1], result.description);
         if (result.keywords && result.keywords.length > 0) {
-          console.log(chalk.gray(`   Keywords: ${result.keywords.join(', ')}`));
+          Output.listItem(`Keywords: ${result.keywords.join(', ')}`);
         }
-        console.log();
+        Output.newLine();
       }
       
       if (results.length > limit) {
-        console.log(chalk.gray(`... and ${results.length - limit} more results. Use --limit ${results.length} to see all.`));
+        Output.info(`... and ${results.length - limit} more results. Use --limit ${results.length} to see all.`);
       }
     } catch (error) {
       spinner.fail('Search failed');
@@ -307,73 +305,81 @@ export class JellyManager {
       const latestVersion = info.versions[0]; // Versions should be sorted with latest first
       const packageInfo = latestVersion.package;
 
-      console.log(chalk.cyan(`\n→ ${parsed.scope}/${parsed.name}\n`));
+      Output.newLine();
+      Output.packageInfo(`${parsed.scope}/${parsed.name}`, latestVersion.package.version);
+      Output.newLine();
 
       if (packageInfo.description) {
-        console.log(chalk.bold('Description:'));
-        console.log(`  ${packageInfo.description}\n`);
+        Output.section('Description');
+        Output.listItem(packageInfo.description);
+        Output.newLine();
       }
 
       if (packageInfo.license) {
-        console.log(chalk.bold('License:'));
-        console.log(`  ${packageInfo.license}\n`);
+        Output.section('License');
+        Output.listItem(packageInfo.license);
+        Output.newLine();
       }
 
       if (packageInfo.repository) {
-        console.log(chalk.bold('Repository:'));
-        console.log(`  ${packageInfo.repository}\n`);
+        Output.section('Repository');
+        Output.listItem(packageInfo.repository);
+        Output.newLine();
       }
 
       if (packageInfo.homepage) {
-        console.log(chalk.bold('Homepage:'));
-        console.log(`  ${packageInfo.homepage}\n`);
+        Output.section('Homepage');
+        Output.listItem(packageInfo.homepage);
+        Output.newLine();
       }
 
       if (packageInfo.authors && packageInfo.authors.length > 0) {
-        console.log(chalk.bold('Authors:'));
-        console.log(`  ${packageInfo.authors.join(', ')}\n`);
+        Output.section('Authors');
+        Output.listItem(packageInfo.authors.join(', '));
+        Output.newLine();
       }
 
       if (packageInfo.realm) {
-        console.log(chalk.bold('Realm:'));
-        console.log(`  ${packageInfo.realm}\n`);
+        Output.section('Realm');
+        Output.listItem(packageInfo.realm);
+        Output.newLine();
       }
 
       if (info.versions && info.versions.length > 0) {
-        console.log(chalk.bold('Versions:'));
+        Output.section('Versions');
         const latestVersions = info.versions.slice(0, 5); // Show first 5 versions (latest)
         for (const versionInfo of latestVersions) {
-          console.log(`  ${versionInfo.package.version}`);
+          Output.listItem(versionInfo.package.version);
         }
         if (info.versions.length > 5) {
-          console.log(chalk.gray(`  ... and ${info.versions.length - 5} more`));
+          Output.listItem(`... and ${info.versions.length - 5} more`);
         }
-        console.log();
+        Output.newLine();
       }
 
       // Show dependencies if they exist
       if (latestVersion.dependencies && Object.keys(latestVersion.dependencies).length > 0) {
-        console.log(chalk.bold('Dependencies:'));
+        Output.section('Dependencies');
         for (const [depName, depValue] of Object.entries(latestVersion.dependencies)) {
-          console.log(`  ${depName}: ${depValue}`);
+          Output.listItem(`${depName}: ${depValue}`);
         }
-        console.log();
+        Output.newLine();
       }
 
       if (latestVersion["server-dependencies"] && Object.keys(latestVersion["server-dependencies"]).length > 0) {
-        console.log(chalk.bold('Server Dependencies:'));
+        Output.section('Server Dependencies');
         for (const [depName, depValue] of Object.entries(latestVersion["server-dependencies"])) {
-          console.log(`  ${depName}: ${depValue}`);
+          Output.listItem(`${depName}: ${depValue}`);
         }
-        console.log();
+        Output.newLine();
       }
 
       if (latestVersion["dev-dependencies"] && Object.keys(latestVersion["dev-dependencies"]).length > 0) {
-        console.log(chalk.bold('Dev Dependencies:'));
+        Output.section('Dev Dependencies');
         for (const [depName, depValue] of Object.entries(latestVersion["dev-dependencies"])) {
-          console.log(`  ${depName}: ${depValue}`);
+          Output.listItem(`${depName}: ${depValue}`);
         }
-        console.log();
+        Output.newLine();
       }
 
     } catch (error) {
@@ -385,7 +391,7 @@ export class JellyManager {
   async list(): Promise<void> {
     try {
       if (!(await this.projectManager.jellyConfigExists())) {
-        console.log(chalk.yellow('No jelly.json found. Run "jelly init" first.'));
+        Output.warning('No jelly.json found. Run "jelly init" first.');
         return;
       }
 
@@ -396,31 +402,33 @@ export class JellyManager {
       };
 
       if (Object.keys(allDeps).length === 0) {
-        console.log(chalk.yellow('No dependencies found in jelly.json'));
+        Output.warning('No dependencies found in jelly.json');
         return;
       }
 
-      console.log(chalk.cyan('\n🪼 Installed packages:\n'));
+      Output.newLine();
+      Output.info('Installed packages:');
+      Output.newLine();
 
       // Show regular dependencies
       if (config.dependencies && Object.keys(config.dependencies).length > 0) {
-        console.log(chalk.bold('Dependencies:'));
+        Output.section('Dependencies');
         for (const [packageName, version] of Object.entries(config.dependencies)) {
-          console.log(chalk.blue(`  → ${packageName}@${version}`));
+          Output.listItem(`${packageName}@${version}`);
         }
-        console.log();
+        Output.newLine();
       }
 
       // Show dev dependencies
       if (config.devDependencies && Object.keys(config.devDependencies).length > 0) {
-        console.log(chalk.bold('Dev Dependencies:'));
+        Output.section('Dev Dependencies');
         for (const [packageName, version] of Object.entries(config.devDependencies)) {
-          console.log(chalk.gray(`  → ${packageName}@${version}`));
+          Output.listItem(`${packageName}@${version}`);
         }
-        console.log();
+        Output.newLine();
       }
 
-      console.log(chalk.gray(`Total: ${Object.keys(allDeps).length} packages`));
+      Output.info(`Total: ${Object.keys(allDeps).length} packages`);
     } catch (error) {
       throw new Error(`Failed to list packages: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -484,16 +492,21 @@ export class JellyManager {
       spinner.stop();
 
       if (outdated.length === 0) {
-        console.log(chalk.green('\n🪼 All packages are up to date! ✨\n'));
+        Output.newLine();
+        Output.success('All packages are up to date! ✨');
+        Output.newLine();
       } else {
-        console.log(chalk.yellow(`\n🪼 Found ${outdated.length} outdated package(s):\n`));
+        Output.newLine();
+        Output.warning(`Found ${outdated.length} outdated package(s):`);
+        Output.newLine();
 
         for (const pkg of outdated) {
-          const color = pkg.isDev ? chalk.gray : chalk.blue;
-          console.log(color(`  → ${pkg.name}: ${pkg.current} → ${pkg.latest}${pkg.isDev ? ' (dev)' : ''}`));
+          Output.listItem(`${pkg.name}: ${pkg.current} → ${pkg.latest}${pkg.isDev ? ' (dev)' : ''}`);
         }
 
-        console.log(chalk.cyan(`\nRun ${chalk.bold('jelly update')} to update all packages, or ${chalk.bold('jelly update <package>')} to update specific packages.\n`));
+        Output.newLine();
+        Output.info(`Run 'jelly update' to update all packages, or 'jelly update <package>' to update specific packages.`);
+        Output.newLine();
       }
 
       return { outdated, upToDate };
@@ -601,7 +614,7 @@ export class JellyManager {
       spinner.succeed(`Successfully updated ${updatedCount} package(s)!`);
       
       if (updatedCount > 0) {
-        console.log(chalk.blue(`📁 Updated packages in: ${this.packageDownloader.getPackagesPath()}`));
+        Output.info(`Updated packages in: ${await this.packageDownloader.getPackagesPath()}`);
       }
     } catch (error) {
       spinner.fail('Update failed');
@@ -625,7 +638,7 @@ export class JellyManager {
         ...(config.serverDependencies || {})
       };
 
-      const packagesPath = this.packageDownloader.getPackagesPath();
+      const packagesPath = await this.packageDownloader.getPackagesPath();
       const fs = await import('fs');
       const path = await import('path');
 
@@ -725,10 +738,10 @@ export class JellyManager {
       spinner.succeed(`Cleaned ${totalUnused} unused item(s)!`);
       
       if (unusedPackages.length > 0) {
-        console.log(chalk.gray(`Removed packages: ${unusedPackages.join(', ')}`));
+        Output.info(`Removed packages: ${unusedPackages.join(', ')}`);
       }
       if (unusedAliases.length > 0) {
-        console.log(chalk.gray(`Removed aliases: ${unusedAliases.map(a => a + '.lua').join(', ')}`));
+        Output.info(`Removed aliases: ${unusedAliases.map(a => a + '.lua').join(', ')}`);
       }
     } catch (error) {
       spinner.fail('Clean failed');
@@ -756,7 +769,7 @@ export class JellyManager {
       fs.rmSync(cacheDir, { recursive: true, force: true });
 
       spinner.succeed('Package cache cleaned!');
-      console.log(chalk.gray(`Removed cache directory: ${cacheDir}`));
+      Output.info(`Removed cache directory: ${cacheDir}`);
     } catch (error) {
       spinner.fail('Cache clean failed');
       throw error;
@@ -782,10 +795,10 @@ export class JellyManager {
 
       if (isValid) {
         spinner.succeed('Lockfile is valid and up to date!');
-        console.log(chalk.green(`📋 ${this.lockfileManager.getLockfilePath()}`));
+        Output.info(this.lockfileManager.getLockfilePath());
       } else {
         spinner.fail('Lockfile is outdated or invalid.');
-        console.log(chalk.yellow('Run "jelly install" to update the lockfile.'));
+        Output.warning('Run "jelly install" to update the lockfile.');
       }
     } catch (error) {
       spinner.fail('Lockfile verification failed');
@@ -818,8 +831,8 @@ export class JellyManager {
       await this.lockfileManager.writeLockfile(lockfile);
 
       spinner.succeed('Lockfile regenerated successfully!');
-      console.log(chalk.green(`📋 Created new lockfile: ${this.lockfileManager.getLockfilePath()}`));
-      console.log(chalk.blue(`📦 Resolved ${Object.keys(lockfile.packages).length} packages`));
+      Output.success(`Created new lockfile: ${this.lockfileManager.getLockfilePath()}`);
+      Output.info(`Resolved ${Object.keys(lockfile.packages).length} packages`);
     } catch (error) {
       spinner.fail('Lockfile regeneration failed');
       throw error;
@@ -831,7 +844,9 @@ export class JellyManager {
       const { outdated } = await this.outdated();
       
       if (outdated.length > 0) {
-        console.log(chalk.yellow(`\n⚠ ${outdated.length} package(s) are outdated. Run ${chalk.bold('jelly outdated')} for details.\n`));
+        Output.newLine();
+        Output.warning(`${outdated.length} package(s) are outdated. Run 'jelly outdated' for details.`);
+        Output.newLine();
       }
     } catch (error) {
       // Silently fail - don't interrupt the main installation process
@@ -842,7 +857,7 @@ export class JellyManager {
     return new Promise(async (resolve, reject) => {
       try {
         if (!(await this.projectManager.jellyConfigExists())) {
-          console.log(chalk.red('No jelly.json found. Run "jelly init" first.'));
+          Output.error('No jelly.json found. Run "jelly init" first.');
           resolve();
           return;
         }
@@ -850,15 +865,16 @@ export class JellyManager {
         const config = await this.projectManager.readJellyConfig();
         
         if (!config.scripts || !config.scripts[scriptName]) {
-          console.log(chalk.red(`Script "${scriptName}" not found in jelly.json`));
+          Output.error(`Script "${scriptName}" not found in jelly.json`);
           
           if (config.scripts && Object.keys(config.scripts).length > 0) {
-            console.log(chalk.cyan('\nAvailable scripts:'));
+            Output.newLine();
+            Output.info('Available scripts:');
             for (const [name, command] of Object.entries(config.scripts)) {
-              console.log(chalk.blue(`  → ${name}: `) + chalk.gray(command));
+              Output.listItem(`${name}`, command);
             }
           } else {
-            console.log(chalk.gray('\nNo scripts defined in jelly.json'));
+            Output.info('No scripts defined in jelly.json');
           }
           resolve();
           return;
@@ -867,8 +883,9 @@ export class JellyManager {
         const command = config.scripts[scriptName];
         const fullCommand = args.length > 0 ? `${command} ${args.join(' ')}` : command;
         
-        console.log(chalk.cyan(`🪼 Running script: ${scriptName}`));
-        console.log(chalk.gray(`> ${fullCommand}\n`));
+        Output.info(`Running script: ${scriptName}`);
+        Output.listItem(fullCommand);
+        Output.newLine();
 
         const { spawn } = await import('child_process');
         const isWindows = process.platform === 'win32';
@@ -882,21 +899,23 @@ export class JellyManager {
 
         childProcess.on('close', (code) => {
           if (code === 0) {
-            console.log(chalk.green(`\n✨ Script "${scriptName}" completed successfully!`));
+            Output.newLine();
+            Output.success(`Script "${scriptName}" completed successfully!`);
             resolve();
           } else {
-            console.log(chalk.red(`\n💥 Script "${scriptName}" failed with exit code ${code}`));
+            Output.newLine();
+            Output.error(`Script "${scriptName}" failed with exit code ${code}`);
             reject(new Error(`Script failed with exit code ${code}`));
           }
         });
 
         childProcess.on('error', (error) => {
-          console.error(chalk.red(`Failed to run script: ${error.message}`));
+          Output.error(`Failed to run script: ${error.message}`);
           reject(error);
         });
 
       } catch (error) {
-        console.error(chalk.red(`Error running script: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        Output.error(`Error running script: ${error instanceof Error ? error.message : 'Unknown error'}`);
         reject(error);
       }
     });
@@ -905,68 +924,33 @@ export class JellyManager {
   async listScripts(): Promise<void> {
     try {
       if (!(await this.projectManager.jellyConfigExists())) {
-        console.log(chalk.yellow('No jelly.json found. Run "jelly init" first.'));
+        Output.warning('No jelly.json found. Run "jelly init" first.');
         return;
       }
 
       const config = await this.projectManager.readJellyConfig();
       
       if (!config.scripts || Object.keys(config.scripts).length === 0) {
-        console.log(chalk.yellow('No scripts defined in jelly.json'));
-        console.log(chalk.gray('\nTo add scripts, edit your jelly.json file:'));
-        console.log(chalk.gray('{\n  "scripts": {\n    "build": "rojo build",\n    "serve": "rojo serve"\n  }\n}'));
+        Output.warning('No scripts defined in jelly.json');
+        Output.newLine();
+        Output.info('To add scripts, edit your jelly.json file:');
+        Output.listItem('{\n  "scripts": {\n    "build": "rojo build",\n    "serve": "rojo serve"\n  }\n}');
         return;
       }
 
-      console.log(chalk.cyan('\n🪼 Available scripts:\n'));
+      Output.newLine();
+      Output.info('Available scripts:');
+      Output.newLine();
       
       for (const [name, command] of Object.entries(config.scripts)) {
-        console.log(chalk.blue(`  → ${name}`));
-        console.log(chalk.gray(`    ${command}`));
-        console.log();
+        Output.listItem(name, command);
+        Output.newLine();
       }
 
-      console.log(chalk.gray(`Run a script with: ${chalk.cyan('jelly run <script-name>')}`));
+      Output.info(`Run a script with: 'jelly run <script-name>'`);
     } catch (error) {
-      console.error(chalk.red(`Error listing scripts: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      Output.error(`Error listing scripts: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }
-
-  // Workspace methods
-  async initWorkspace(options: InitOptions = {}): Promise<void> {
-    return await this.workspaceManager.initWorkspace(options);
-  }
-
-  async createWorkspace(workspacePath: string, options: { name?: string } = {}): Promise<void> {
-    return await this.workspaceManager.createWorkspace(workspacePath, options);
-  }
-
-  async listWorkspaces(): Promise<void> {
-    return await this.workspaceManager.listWorkspaces();
-  }
-
-  async installAllWorkspaces(options: { parallel?: boolean } = {}): Promise<void> {
-    return await this.workspaceManager.installAllWorkspaces(options);
-  }
-
-  async addToWorkspace(workspaceName: string, packages: string[], options: { dev?: boolean } = {}): Promise<void> {
-    return await this.workspaceManager.addToWorkspace(workspaceName, packages, options);
-  }
-
-  async runScriptInWorkspaces(
-    scriptName: string, 
-    args: string[] = [], 
-    options: { filter?: string[]; exclude?: string[]; parallel?: boolean } = {}
-  ): Promise<void> {
-    return await this.workspaceManager.runScriptInWorkspaces(scriptName, args, options);
-  }
-
-  async isWorkspace(): Promise<boolean> {
-    return await this.workspaceManager.isWorkspace();
-  }
-
-  async getCurrentWorkspace() {
-    return await this.workspaceManager.getCurrentWorkspace();
   }
 
   async analyzeDependencies(): Promise<void> {
@@ -995,25 +979,28 @@ export class JellyManager {
       spinner.succeed('Dependency analysis complete!');
 
       // Display resolved packages
-      console.log(chalk.blue('\n📦 Resolved packages:'));
+      Output.newLine();
+      Output.section('Resolved packages');
       for (const [packageName, resolved] of resolutionResult.resolved) {
-        console.log(chalk.gray(`  ${packageName}@${resolved.version}`));
+        Output.listItem(`${packageName}@${resolved.version}`);
       }
 
       // Display conflicts if any
       if (resolutionResult.conflicts.length > 0) {
         this.displayVersionConflicts(resolutionResult.conflicts);
       } else {
-        console.log(chalk.green('\n✅ No version conflicts detected!'));
+        Output.newLine();
+        Output.success('No version conflicts detected!');
       }
 
       // Show resolution statistics
-      console.log(chalk.blue(`\n📊 Resolution statistics:`));
-      console.log(chalk.gray(`  Total packages: ${resolutionResult.resolved.size}`));
-      console.log(chalk.gray(`  Conflicts: ${resolutionResult.conflicts.length}`));
+      Output.newLine();
+      Output.section('Resolution statistics');
+      Output.listItem(`Total packages: ${resolutionResult.resolved.size}`);
+      Output.listItem(`Conflicts: ${resolutionResult.conflicts.length}`);
       
       const cacheStats = this.versionResolver.getCacheStats();
-      console.log(chalk.gray(`  Cache size: ${cacheStats.size} packages`));
+      Output.listItem(`Cache size: ${cacheStats.size} packages`);
 
     } catch (error) {
       spinner.fail('Dependency analysis failed');

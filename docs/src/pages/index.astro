@@ -1,0 +1,147 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Code } from 'astro:components';
+---
+
+<Layout>
+  <!-- Beta Warning Banner -->
+  <div class="bg-primary-600 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex items-center justify-center space-x-2">
+        <span class="text-lg">⚠️</span>
+        <span class="font-medium">Beta Release</span>
+        <span class="hidden sm:inline">-</span>
+        <span class="text-sm">Jelly is currently in beta (v0.3). Expect some rough edges and breaking changes.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div class="text-center">
+        <div class="flex justify-center items-center space-x-4 mb-8">
+          <span class="text-6xl">🪼</span>
+          <h1 class="text-5xl font-bold text-grey-900">Jelly</h1>
+        </div>
+        <p class="text-xl text-grey-600 mb-8 max-w-3xl mx-auto">
+          A modern package manager for Roblox, built on top of Wally infrastructure. 
+          Provides a streamlined, npm-like experience with intelligent package optimization.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/docs/getting-started" class="bg-primary-600 text-white px-8 py-3 font-semibold hover:bg-primary-700 transition-colors">
+            Get Started
+          </a>
+          <a href="/docs/getting-started" class="border border-grey-300 text-grey-700 px-8 py-3 font-semibold hover:bg-grey-50 transition-colors">
+            Documentation
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="bg-grey-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-grey-900 mb-4">Why Choose Jelly?</h2>
+        <p class="text-lg text-grey-600">Modern package management with intelligent optimization</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="bg-white p-6 border border-grey-200">
+          <div class="text-primary-600 text-3xl mb-4">📦</div>
+          <h3 class="text-xl font-semibold mb-2">Clean JSON Configuration</h3>
+          <p class="text-grey-600">Manage dependencies in a familiar jelly.json format, just like package.json</p>
+        </div>
+        
+        <div class="bg-white p-6 border border-grey-200">
+          <div class="text-primary-600 text-3xl mb-4">🔒</div>
+          <h3 class="text-xl font-semibold mb-2">Lockfile Support</h3>
+          <p class="text-grey-600">Reproducible installs with jelly-lock.json (like package-lock.json)</p>
+        </div>
+        
+        <div class="bg-white p-6 border border-grey-200">
+          <div class="text-primary-600 text-3xl mb-4">🧹</div>
+          <h3 class="text-xl font-semibold mb-2">Smart Package Cleanup</h3>
+          <p class="text-grey-600">Automatically removes unnecessary files and optimizes package structure</p>
+        </div>
+        
+        <div class="bg-white p-6 border border-grey-200">
+          <div class="text-primary-600 text-3xl mb-4">💡</div>
+          <h3 class="text-xl font-semibold mb-2">Intelligent Resolution</h3>
+          <p class="text-grey-600">Handles messy package structures and fixes require paths automatically</p>
+        </div>
+        
+        <div class="bg-white p-6 border border-grey-200">
+          <div class="text-primary-600 text-3xl mb-4">🎯</div>
+          <h3 class="text-xl font-semibold mb-2">Wally Compatible</h3>
+          <p class="text-grey-600">Uses the same packages and registry as Wally - seamless migration</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start Section -->
+  <section class="bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-grey-900 mb-4">Quick Start</h2>
+        <p class="text-lg text-grey-600">Get up and running with Jelly in minutes</p>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h3 class="text-xl font-semibold mb-4">Installation</h3>
+          <div class="mb-6 prose">
+            <Code code={`# Install via aftman
+aftman add OMouta/Jelly`} lang="bash" theme="github-dark" />
+          </div>
+          
+          <h3 class="text-xl font-semibold mb-4">Create a new project</h3>
+          <div class="mb-6 prose">
+            <Code code={`# Initialize new project
+jelly init
+
+# Install dependencies
+jelly install`} lang="bash" theme="github-dark" />
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-xl font-semibold mb-4">jelly.json Configuration</h3>
+          <div class="prose">
+            <Code code={`{
+  "name": "my-game",
+  "version": "1.0.0",
+  "dependencies": {
+    "roblox/roact": "^1.4.0",
+    "roblox/rodux": "^3.0.0"
+  }
+}`} lang="json" theme="github-dark" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="bg-primary-600 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold mb-4">Ready to Try Jelly?</h2>
+        <p class="text-xl text-primary-100 mb-8">
+          Join the growing community of developers using Jelly for their Roblox projects
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/docs/getting-started" class="bg-white text-primary-600 px-8 py-3 font-semibold hover:bg-primary-50 transition-colors">
+            Get Started Now
+          </a>
+          <a href="https://github.com/jelly-package-manager/jelly" class="border border-primary-300 text-white px-8 py-3 font-semibold hover:bg-primary-500 transition-colors">
+            View on GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

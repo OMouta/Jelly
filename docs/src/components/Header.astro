@@ -1,0 +1,46 @@
+---
+---
+
+<header class="bg-grey-900 text-white sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <div class="flex items-center">
+        <a href="/" class="flex items-center space-x-2">
+          <span class="text-2xl">🪼</span>
+          <span class="text-xl font-bold">Jelly</span>
+        </a>
+      </div>
+      
+      <nav class="hidden md:flex space-x-8">
+        <a href="/" class="text-grey-300 hover:text-white transition-colors">Home</a>
+        <a href="/docs/getting-started" class="text-grey-300 hover:text-white transition-colors">Documentation</a>
+        <a href="https://github.com/OMouta/Jelly" class="text-grey-300 hover:text-white transition-colors">GitHub</a>
+      </nav>
+      
+      <div class="md:hidden">
+        <button id="mobile-menu-button" class="text-grey-300 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="mobile-menu" class="hidden md:hidden bg-grey-800">
+    <div class="px-2 pt-2 pb-3 space-y-1">
+      <a href="/" class="block px-3 py-2 text-grey-300 hover:text-white transition-colors">Home</a>
+      <a href="/docs/getting-started" class="block px-3 py-2 text-grey-300 hover:text-white transition-colors">Documentation</a>
+      <a href="https://github.com/jelly-package-manager/jelly" class="block px-3 py-2 text-grey-300 hover:text-white transition-colors">GitHub</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const button = document.getElementById('mobile-menu-button');
+  const menu = document.getElementById('mobile-menu');
+  
+  button?.addEventListener('click', () => {
+    menu?.classList.toggle('hidden');
+  });
+</script>

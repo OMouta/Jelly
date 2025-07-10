@@ -25,7 +25,11 @@
     "build:binaries": "npm run build && pkg . --out-path binaries",
     "build:linux": "npm run build && pkg . --targets node18-linux-x64 --out-path binaries",
     "build:windows": "npm run build && pkg . --targets node18-win-x64 --out-path binaries",
-    "build:mac": "npm run build && pkg . --targets node18-macos-x64 --out-path binaries"
+    "build:mac": "npm run build && pkg . --targets node18-macos-x64 --out-path binaries",
+    "docs:dev": "npm run dev --prefix docs",
+    "docs:build": "npm run build --prefix docs",
+    "docs:preview": "npm run preview --prefix docs",
+    "docs:install": "npm install --prefix docs"
   },
   "files": [
     "dist/**/*"

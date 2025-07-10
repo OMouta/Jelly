@@ -1,0 +1,52 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  return docs.map((doc) => ({
+    params: { slug: doc.slug },
+    props: { doc },
+  }));
+}
+
+const { doc } = Astro.props;
+const { Content } = await doc.render();
+
+// Get all docs for sidebar
+const allDocs = await getCollection('docs');
+const sortedDocs = allDocs.sort((a, b) => a.data.order - b.data.order);
+---
+
+<Layout title={`${doc.data.title} - Jelly`} description={doc.data.description}>
+  <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Sidebar -->
+    <aside class="w-64 flex-shrink-0 mr-8">
+      <div class="sticky top-8">
+        <h3 class="text-lg font-semibold text-grey-900 mb-4">Documentation</h3>
+        <nav class="space-y-2">
+          {sortedDocs.map((docItem) => (
+            <a
+              href={`/docs/${docItem.slug}`}
+              class={`block px-3 py-2 text-sm transition-colors ${
+                docItem.slug === doc.slug
+                  ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
+                  : 'text-grey-600 hover:text-grey-900 hover:bg-grey-50'
+              }`}
+            >
+              {docItem.data.title}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 min-w-0">
+      <article class="prose prose-lg max-w-none">
+        <h1 class="text-3xl font-bold mb-4">{doc.data.title}</h1>
+        <Content />
+      </article>
+    </main>
+  </div>
+</Layout>

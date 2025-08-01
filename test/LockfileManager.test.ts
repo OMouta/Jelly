@@ -1,4 +1,4 @@
-import { LockfileManager } from '../src/lib/LockfileManager';
+import { LockfileManager } from '../src/lib/managers/LockfileManager';
 import { JellyConfig } from '../src/types';
 import * as fs from 'fs-extra';
 import * as path from 'path';

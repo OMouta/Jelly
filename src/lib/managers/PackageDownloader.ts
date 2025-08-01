@@ -2,6 +2,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { WallyAPI, HTTP_HEADERS, DOWNLOAD_HEADERS } from './WallyAPI';
 import { LockfileEntry, JellyConfig } from '../../types';
+import { fetch } from '../utils/fetch';
 
 export interface PackageDownloadInfo {
   scope: string;

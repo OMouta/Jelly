@@ -44,6 +44,43 @@ jelly install roblox/roact roblox/rodux
 jelly install -D roblox/testez
 ```
 
+### `jelly exec <package> [args...]`
+
+Execute a binary package with smart detection. Checks for locally installed packages first, then downloads from registry if needed.
+
+**Alias:** `jelly x`
+
+**Options:**
+
+- `-y, --yes`: Skip confirmation prompt for remote packages
+
+**Examples:**
+
+```bash
+# Execute local package if available, otherwise download from registry
+jelly exec my-tool
+
+# Use the short alias
+jelly x my-tool
+
+# Skip confirmation for remote packages
+jelly exec myuser/formatter -y
+
+# Pass arguments to the binary
+jelly exec linter --fix src/
+
+# Execute specific version from registry
+jelly exec myuser/tool@1.2.0 --help
+```
+
+**How it works:**
+
+- First checks for locally installed packages (in Packages/ or Packages/_Index/)
+- If not found locally and package spec includes scope/version, downloads from registry
+- Requires `target` configuration in the package's `jelly.json`
+- Supports multiple runtimes (Lune, Luau, Node.js, Python, etc.)
+- Automatically cleans up temporary files after execution
+
 ### `jelly add <packages...>`
 
 Add packages to jelly.json and install them.
@@ -193,6 +230,22 @@ jelly run build --output game.rbxl
 jelly run serve
 ```
 
+### `jelly runtimes`
+
+List available runtimes for executing binary packages.
+
+**Example:**
+
+```bash
+jelly runtimes
+```
+
+**Output shows:**
+
+- Available runtimes installed on your system  
+- Unavailable runtimes that could be installed
+- Status of each runtime (available/not available)
+
 ## Lockfile Commands
 
 ### `jelly lockfile [options]`
@@ -246,3 +299,4 @@ For faster workflow, Jelly provides several command aliases:
 - `jelly ls` → `jelly list`
 - `jelly s` → `jelly search`
 - `jelly deps` → `jelly analyze`
+- `jelly x` → `jelly exec`

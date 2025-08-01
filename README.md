@@ -14,17 +14,32 @@ A modern package manager for Roblox, built on top of Wally. Jelly provides a str
 
 ## Installation
 
-Add Jelly to your `aftman.toml`:
+### Using [Rokit](https://github.com/rojo-rbx/rokit)
 
-```bash
-aftman add OMouta/Jelly
-```
+- Add and install:
 
-Then install:
+  ```bash
+  rokit add OMouta/Jelly
+  ```
 
-```bash
-aftman install
-```
+### Using [Aftman](https://github.com/LPGhatguy/aftman) (deprecated)
+
+- Add Jelly to your `aftman.toml`:
+
+  ```bash
+  aftman add OMouta/Jelly
+  ```
+
+- Then install:
+
+  ```bash
+  aftman install
+  ```
+
+### Manual
+
+- Go to the latest [GitHub release](https://github.com/OMouta/Jelly/releases)
+- Download the executable for your platform
 
 ## Quick Start
 

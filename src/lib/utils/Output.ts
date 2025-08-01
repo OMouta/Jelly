@@ -44,6 +44,9 @@ const icons = {
   zap: '⚡',
   tree: '🌳',
   link: '🔗',
+  runtime: '🔧',
+  execute: '▶️',
+  binary: '⚙️',
 };
 
 export class Output {

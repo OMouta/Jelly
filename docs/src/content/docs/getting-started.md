@@ -18,25 +18,34 @@ category: "basics"
 
 ## Installation
 
-Jelly can be installed via Aftman. Choose the method that works best for your setup:
+Choose the method that works best for your setup:
 
-### Via Aftman (Recommended for Roblox developers)
+### Using [Rokit](https://github.com/rojo-rbx/rokit) (recomended)
 
-Add Jelly to your `aftman.toml`:
+- Add and install:
 
-```bash
-aftman add OMouta/Jelly
-```
+  ```bash
+  rokit add OMouta/Jelly
+  ```
 
-Then install:
+### Using [Aftman](https://github.com/LPGhatguy/aftman) (deprecated)
 
-```bash
-aftman install
-```
+- Add Jelly to your `aftman.toml`:
 
-### Note on Installation Methods
+  ```bash
+  aftman add OMouta/Jelly
+  ```
 
-*Note: Jelly is currently in beta. Additional installation methods will be available in future releases.*
+- Then install:
+
+  ```bash
+  aftman install
+  ```
+
+### Manual
+
+- Go to the latest [GitHub release](https://github.com/OMouta/Jelly/releases)
+- Download the executable for your platform
 
 ## Creating Your First Project
 
@@ -93,6 +102,7 @@ This creates a `jelly-lock.json` file to ensure reproducible installs and downlo
 - `jelly add <package>` - Add package
 - `jelly remove <package>` - Remove package
 - `jelly update [packages...]` - Update packages
+- `jelly exec <package> [args...]` - Execute binary packages (checks local first, then downloads)
 
 ### Discovery & Information
 

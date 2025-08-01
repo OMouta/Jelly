@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node ./dist/bin/jelly.js",
+    "start": "node ./dist/src/bin/jelly.js",
     "test": "jest",
     "prepare": "npm run build",
     "build:binaries": "npm run build && pkg . --out-path binaries",

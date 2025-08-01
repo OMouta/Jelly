@@ -8,6 +8,7 @@ import { AuthManager } from './AuthManager';
 import { ProjectManager } from './ProjectManager';
 import { PublishOptions, WallyManifest, JellyConfig } from '../../types';
 import { fetch } from '../utils/fetch';
+import { jellyJsonToWallyToml, writeWallyToml } from '../utils/conversion';
 
 export class PublishManager {
   private projectManager: ProjectManager;
@@ -139,7 +140,7 @@ export class PublishManager {
         name: config.name,
         version: config.version,
         description: config.description,
-        registry: config.registry || 'https://github.com/UpliftGames/wally',
+        registry: config.registry || 'https://github.com/UpliftGames/wally-index',
         realm: config.realm || 'shared',
         license: config.license || 'MIT',
         authors: config.authors || ['Unknown'],
@@ -168,90 +169,21 @@ export class PublishManager {
   }
 
   /**
-   * Write wally.toml file
+   * Write wally.toml file using the conversion utility
    */
   private async writeWallyToml(manifest: WallyManifest): Promise<void> {
     const wallyTomlPath = path.join(this.projectManager.getProjectPath(), 'wally.toml');
     
-    let tomlContent = '[package]\n';
-    tomlContent += `name = "${manifest.package.name}"\n`;
-    tomlContent += `version = "${manifest.package.version}"\n`;
+    // Convert the manifest to WallyToml format and write it
+    const wallyToml = {
+      package: manifest.package,
+      dependencies: manifest.dependencies,
+      'server-dependencies': manifest['server-dependencies'],
+      'dev-dependencies': manifest['dev-dependencies'],
+      place: manifest.place
+    };
     
-    if (manifest.package.description) {
-      tomlContent += `description = "${manifest.package.description}"\n`;
-    }
-    
-    if (manifest.package.registry) {
-      tomlContent += `registry = "${manifest.package.registry}"\n`;
-    }
-    
-    if (manifest.package.realm) {
-      tomlContent += `realm = "${manifest.package.realm}"\n`;
-    }
-    
-    if (manifest.package.license) {
-      tomlContent += `license = "${manifest.package.license}"\n`;
-    }
-    
-    if (manifest.package.authors && manifest.package.authors.length > 0) {
-      tomlContent += `authors = [${manifest.package.authors.map(a => `"${a}"`).join(', ')}]\n`;
-    }
-    
-    if (manifest.package.repository) {
-      tomlContent += `repository = "${manifest.package.repository}"\n`;
-    }
-    
-    if (manifest.package.homepage) {
-      tomlContent += `homepage = "${manifest.package.homepage}"\n`;
-    }
-
-    if (manifest.package.exclude && manifest.package.exclude.length > 0) {
-      tomlContent += `exclude = [${manifest.package.exclude.map(e => `"${e}"`).join(', ')}]\n`;
-    }
-
-    if (manifest.package.private) {
-      tomlContent += `private = ${manifest.package.private}\n`;
-    }
-
-    // Add dependencies
-    if (manifest.dependencies && Object.keys(manifest.dependencies).length > 0) {
-      tomlContent += '\n[dependencies]\n';
-      for (const [fullName, version] of Object.entries(manifest.dependencies)) {
-        const alias = this.getPackageAlias(fullName);
-        tomlContent += `${alias} = "${fullName}@${version}"\n`;
-      }
-    }
-
-    // Add server dependencies
-    if (manifest['server-dependencies'] && Object.keys(manifest['server-dependencies']).length > 0) {
-      tomlContent += '\n[server-dependencies]\n';
-      for (const [fullName, version] of Object.entries(manifest['server-dependencies'])) {
-        const alias = this.getPackageAlias(fullName);
-        tomlContent += `${alias} = "${fullName}@${version}"\n`;
-      }
-    }
-
-    // Add dev dependencies
-    if (manifest['dev-dependencies'] && Object.keys(manifest['dev-dependencies']).length > 0) {
-      tomlContent += '\n[dev-dependencies]\n';
-      for (const [fullName, version] of Object.entries(manifest['dev-dependencies'])) {
-        const alias = this.getPackageAlias(fullName);
-        tomlContent += `${alias} = "${fullName}@${version}"\n`;
-      }
-    }
-
-    // Add place configuration
-    if (manifest.place) {
-      tomlContent += '\n[place]\n';
-      if (manifest.place.shared_packages) {
-        tomlContent += `shared-packages = "${manifest.place.shared_packages}"\n`;
-      }
-      if (manifest.place.server_packages) {
-        tomlContent += `server-packages = "${manifest.place.server_packages}"\n`;
-      }
-    }
-
-    await fs.writeFile(wallyTomlPath, tomlContent);
+    await writeWallyToml(wallyTomlPath, wallyToml);
   }
 
   /**
@@ -295,6 +227,11 @@ export class PublishManager {
   private async validatePackage(config: JellyConfig, manifest: WallyManifest): Promise<void> {
     const errors: string[] = [];
 
+    // Check if package is marked as private
+    if (config.private === true) {
+      throw new Error('Cannot publish private packages. Remove "private": true from jelly.json or set it to false to publish.');
+    }
+
     // Check required fields
     if (!manifest.package.name) {
       errors.push('Package name is required');
@@ -321,8 +258,45 @@ export class PublishManager {
       errors.push('src/ directory is required for publishing');
     }
 
+    // Validate package size (Wally guideline: 2MB max)
+    await this.validatePackageSize(config);
+
     if (errors.length > 0) {
       throw new Error(`Package validation failed:\n${errors.map(e => `  - ${e}`).join('\n')}`);
+    }
+  }
+
+  /**
+   * Validate package size doesn't exceed Wally's 2MB limit
+   */
+  private async validatePackageSize(config: JellyConfig): Promise<void> {
+    const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB in bytes
+    
+    const files = await this.getPackageFiles(config);
+    const projectPath = this.projectManager.getProjectPath();
+    let totalSize = 0;
+    
+    for (const file of files) {
+      const filePath = path.join(projectPath, file);
+      
+      if (await fs.pathExists(filePath)) {
+        const stats = await fs.stat(filePath);
+        
+        if (stats.isFile()) {
+          totalSize += stats.size;
+        }
+      }
+    }
+    
+    // Add estimated size for generated wally.toml
+    totalSize += 1024; // Rough estimate for wally.toml
+    
+    if (totalSize > MAX_SIZE_BYTES) {
+      const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+      throw new Error(
+        `Package size (${sizeMB}MB) exceeds Wally's 2MB limit. ` +
+        `Please reduce package size by removing unnecessary files or using the "exclude" field in jelly.json.`
+      );
     }
   }
 
@@ -337,7 +311,27 @@ export class PublishManager {
       const output = fs.createWriteStream(zipPath);
       const archive = archiver('zip', { zlib: { level: 9 } });
 
-      output.on('close', () => resolve(zipPath));
+      output.on('close', async () => {
+        try {
+          // Final size check after ZIP creation
+          const stats = await fs.stat(zipPath);
+          const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+          
+          if (stats.size > MAX_SIZE_BYTES) {
+            const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+            await fs.remove(zipPath); // Clean up the oversized ZIP
+            reject(new Error(
+              `Package archive (${sizeMB}MB) exceeds Wally's 2MB limit. ` +
+              `Please reduce package size by removing unnecessary files or using the "exclude" field in jelly.json.`
+            ));
+            return;
+          }
+          
+          resolve(zipPath);
+        } catch (error) {
+          reject(error);
+        }
+      });
       archive.on('error', reject);
 
       archive.pipe(output);

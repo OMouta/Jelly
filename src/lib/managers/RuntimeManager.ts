@@ -236,7 +236,7 @@ async checkRuntimeAvailable(command: string): Promise<boolean> {
       Output.newLine();
       Output.warning('This command will download and execute a package from the Wally registry:');
       Output.log(`  Package: ${packageDisplayName}`);
-      Output.log(`  Registry: https://api.wally.run`);
+      Output.log(`  Registry: Using configured registry`);  // TODO: Show actual registry from config
       Output.newLine();
       
       // Use readline to prompt for confirmation

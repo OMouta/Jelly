@@ -170,7 +170,8 @@ export class ProjectManager {
       jelly: {
         cleanup: true,
         optimize: true,
-        packagesPath: "Packages"
+        packagesPath: "Packages",
+        updateProjectFile: true // Can be disabled by users who don't use Rojo or Argon
       }
     };
 
@@ -212,6 +213,7 @@ export class ProjectManager {
       license: "MIT",
       authors: [authorInfo],
       realm: "shared",
+      registry: "https://github.com/upliftgames/wally-index",
       include: [
         "README.md",
         "src/**",
@@ -229,7 +231,8 @@ export class ProjectManager {
       jelly: {
         cleanup: true,
         optimize: true,
-        packagesPath: "Packages"
+        packagesPath: "Packages",
+        updateProjectFile: true // Can be disabled by users who don't use Rojo
       }
     };
 

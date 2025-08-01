@@ -1,5 +1,7 @@
-import { WallySearchResult, WallyPackageInfo, WallyPackage } from '../../types';
+import { WallySearchResult, WallyPackageInfo, WallyPackage, JellyConfig } from '../../types';
 import { fetch } from '../utils/fetch';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 
 // Common HTTP headers for Jelly requests
 export const HTTP_HEADERS = {
@@ -16,11 +18,54 @@ export const DOWNLOAD_HEADERS = {
 } as const;
 
 export class WallyAPI {
-  private static readonly BASE_URL = 'https://api.wally.run';
+  private static readonly DEFAULT_BASE_URL = 'https://api.wally.run';
 
-  static async searchPackages(query: string): Promise<WallySearchResult[]> {
+  private static async getRegistryApiUrl(registry?: string): Promise<string> {
+    if (registry) {
+      // If a specific registry is provided, try to resolve its API URL
+      try {
+        const config = await this.readProjectConfig();
+        if (config?.registry && registry === config.registry) {
+          // For now, we'll parse the registry URL to derive the API URL
+          // In a future implementation, this should fetch registry config
+          return this.DEFAULT_BASE_URL; // Fallback for now
+        }
+      } catch (error) {
+        // Ignore config read errors and use default
+      }
+    }
+
+    // Try to read project config for default registry
     try {
-      const response = await fetch(`${this.BASE_URL}/v1/package-search?query=${encodeURIComponent(query)}`, {
+      const config = await this.readProjectConfig();
+      if (config?.registry) {
+        // For now, we'll keep using the default API URL
+        // TODO: Implement proper registry-to-API-URL resolution
+        return this.DEFAULT_BASE_URL;
+      }
+    } catch (error) {
+      // Ignore config read errors and use default
+    }
+
+    return this.DEFAULT_BASE_URL;
+  }
+
+  private static async readProjectConfig(): Promise<JellyConfig | null> {
+    try {
+      const configPath = path.join(process.cwd(), 'jelly.json');
+      if (await fs.pathExists(configPath)) {
+        return await fs.readJson(configPath);
+      }
+    } catch (error) {
+      // Ignore errors and return null
+    }
+    return null;
+  }
+
+  static async searchPackages(query: string, registry?: string): Promise<WallySearchResult[]> {
+    const baseUrl = await this.getRegistryApiUrl(registry);
+    try {
+      const response = await fetch(`${baseUrl}/v1/package-search?query=${encodeURIComponent(query)}`, {
         headers: HTTP_HEADERS
       });
       
@@ -35,9 +80,10 @@ export class WallyAPI {
     }
   }
 
-  static async getPackageInfo(scope: string, name: string): Promise<WallyPackageInfo> {
+  static async getPackageInfo(scope: string, name: string, registry?: string): Promise<WallyPackageInfo> {
+    const baseUrl = await this.getRegistryApiUrl(registry);
     try {
-      const response = await fetch(`${this.BASE_URL}/v1/package-metadata/${scope}/${name}`, {
+      const response = await fetch(`${baseUrl}/v1/package-metadata/${scope}/${name}`, {
         headers: HTTP_HEADERS
       });
       
@@ -55,9 +101,9 @@ export class WallyAPI {
     }
   }
 
-  static async getLatestVersion(scope: string, name: string): Promise<string> {
+  static async getLatestVersion(scope: string, name: string, registry?: string): Promise<string> {
     try {
-      const packageInfo = await this.getPackageInfo(scope, name);
+      const packageInfo = await this.getPackageInfo(scope, name, registry);
       
       if (!packageInfo.versions || packageInfo.versions.length === 0) {
         throw new Error(`No versions found for ${scope}/${name}`);
@@ -68,6 +114,12 @@ export class WallyAPI {
     } catch (error) {
       throw new Error(`Failed to get latest version: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  static getDownloadUrl(scope: string, name: string, version: string, registry?: string): string {
+    // TODO: In the future, this should resolve the download URL based on the registry
+    // For now, we'll use the default Wally API
+    return `https://api.wally.run/v1/package-contents/${scope}/${name}/${version}`;
   }
 
   static parsePackageName(packageName: string): { scope: string; name: string; version?: string } {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import * as fs from 'fs-extra';
 import { JellyManager } from '../lib/managers/JellyManager';
 import { AuthManager } from '../lib/managers/AuthManager';
 import { PublishManager } from '../lib/managers/PublishManager';
@@ -396,6 +397,56 @@ program
   });
 
 program
+  .command('convert-wally')
+  .description('Convert wally.toml to jelly.json')
+  .option('-i, --input <file>', 'input wally.toml file')
+  .option('-o, --output <file>', 'output jelly.json file')
+  .action(async (input?: string, output?: string, options?: any) => {
+    try {
+      // Use positional args first, then options, then defaults
+      const inputPath = input || options?.input || 'wally.toml';
+      const outputPath = output || options?.output || 'jelly.json';
+
+      if (!await fs.pathExists(inputPath)) {
+        Output.error(`Input file not found: ${inputPath}`);
+        process.exit(1);
+      }
+
+      const { convertWallyTomlToJellyJson } = await import('../lib/utils/conversion');
+      await convertWallyTomlToJellyJson(inputPath, outputPath);
+      Output.success(`Converted ${inputPath} to ${outputPath}`);
+    } catch (error) {
+      Output.error('Conversion failed', (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('convert-jelly')
+  .description('Convert jelly.json to wally.toml')
+  .option('-i, --input <file>', 'input jelly.json file')
+  .option('-o, --output <file>', 'output wally.toml file')
+  .action(async (input?: string, output?: string, options?: any) => {
+    try {
+      // Use positional args first, then options, then defaults
+      const inputPath = input || options?.input || 'jelly.json';
+      const outputPath = output || options?.output || 'wally.toml';
+
+      if (!await fs.pathExists(inputPath)) {
+        Output.error(`Input file not found: ${inputPath}`);
+        process.exit(1);
+      }
+
+      const { convertJellyJsonToWallyToml } = await import('../lib/utils/conversion');
+      await convertJellyJsonToWallyToml(inputPath, outputPath);
+      Output.success(`Converted ${inputPath} to ${outputPath}`);
+    } catch (error) {
+      Output.error('Conversion failed', (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
   .command('exec <package>')
   .alias('x')
   .description('Execute a binary package (checks local first, then downloads if needed)')
@@ -438,5 +489,7 @@ program
       process.exit(1);
     }
   });
+
+
 
 program.parse(process.argv);

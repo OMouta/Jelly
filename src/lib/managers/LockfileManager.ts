@@ -71,7 +71,7 @@ export class LockfileManager {
       if (versionInfo) {
         lockfile.packages[packageName] = {
           version: resolved.version,
-          resolved: `https://api.wally.run/v1/package-contents/${packageName}/${resolved.version}`,
+          resolved: WallyAPI.getDownloadUrl(packageName.split('/')[0], packageName.split('/')[1], resolved.version),
           dependencies: versionInfo.dependencies || {},
           devDependencies: versionInfo['dev-dependencies'] || {}
         };
@@ -112,7 +112,7 @@ export class LockfileManager {
         const lockfileKey = `${parsed.scope}/${parsed.name}`;
         packages[lockfileKey] = {
           version: resolvedVersion,
-          resolved: `https://api.wally.run/v1/package-contents/${parsed.scope}/${parsed.name}/${resolvedVersion}`,
+          resolved: WallyAPI.getDownloadUrl(parsed.scope, parsed.name, resolvedVersion),
           dependencies: versionInfo.dependencies || {},
           devDependencies: versionInfo['dev-dependencies'] || {}
         };

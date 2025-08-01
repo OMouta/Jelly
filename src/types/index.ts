@@ -9,9 +9,9 @@ export interface RojoProject {
 }
 
 export interface BinaryPackageTarget {
-  environment: string; // e.g., "lune", "luau", "python", "node", etc.
-  bin: string; // Entry point file, e.g., "main.luau", "cli.py", "index.js"
-  args?: string[]; // Optional default arguments
+  environment: string;
+  bin: string;
+  args?: string[];
 }
 
 export interface JellyConfig {
@@ -20,7 +20,7 @@ export interface JellyConfig {
   description?: string;
   license?: string;
   authors?: string[];
-  realm?: 'shared' | 'server' | 'development';
+  realm?: 'shared' | 'server';
   registry?: string;
   homepage?: string;
   repository?: string;
@@ -36,6 +36,7 @@ export interface JellyConfig {
     cleanup?: boolean;
     optimize?: boolean;
     packagesPath?: string;
+    updateProjectFile?: boolean; // Whether to automatically update Rojo project files
   };
 }
 
@@ -149,7 +150,7 @@ export interface WallyManifest {
     name: string;
     version: string;
     registry?: string;
-    realm?: 'shared' | 'server' | 'development';
+    realm?: 'shared' | 'server';
     description?: string;
     license?: string;
     authors?: string[];

@@ -67,10 +67,12 @@ export class JellyManager {
         await this.packageDownloader.downloadFromLockfile(entry, parsed.scope, parsed.name);
       }
 
-      // Generate package index and update project file
+      // Generate package index and optionally update project file
       spinner.text = 'Updating package index...';
       await this.packageDownloader.generatePackageIndex();
-      await this.packageDownloader.updateProjectFile(this.projectManager);
+      
+      // Only update project file if user has one and hasn't disabled it
+      await this.updateProjectFileIfNeeded(spinner);
 
       spinner.succeed('Packages installed successfully!');
       Output.info(`Packages installed to: ${await this.packageDownloader.getPackagesPath()}`);
@@ -148,10 +150,12 @@ export class JellyManager {
         }
       }
 
-      // Generate package index and update project file
+      // Generate package index and optionally update project file
       spinner.text = 'Generating package index...';
       await this.packageDownloader.generatePackageIndex();
-      await this.packageDownloader.updateProjectFile(this.projectManager);
+      
+      // Only update project file if user has one and hasn't disabled it
+      await this.updateProjectFileIfNeeded(spinner);
 
       spinner.succeed(`Successfully installed ${Object.keys(lockfile.packages).length} packages!`);
       Output.info(`Packages installed to: ${await this.packageDownloader.getPackagesPath()}`);
@@ -221,6 +225,31 @@ export class JellyManager {
       }
     }
     Output.newLine();
+  }
+
+  private async updateProjectFileIfNeeded(spinner: any): Promise<void> {
+    try {
+      // Check if project file exists
+      if (!(await this.projectManager.projectExists())) {
+        // Not an error - user might not be using Rojo
+        return;
+      }
+
+      // Check if user has disabled project file updates in config
+      const config = await this.projectManager.readJellyConfig();
+      if (config.jelly?.updateProjectFile === false) {
+        return;
+      }
+
+      // Safe to update project file
+      spinner.text = 'Updating project file...';
+      await this.packageDownloader.updateProjectFile(this.projectManager);
+    } catch (error) {
+      // Don't fail the entire installation if project file update fails
+      // Just log a warning and continue
+      spinner.text = '⚠ Could not update project file (continuing...)';
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause to show message
+    }
   }
 
   async init(options: InitOptions = {}): Promise<void> {
@@ -605,10 +634,12 @@ export class JellyManager {
       }
 
       if (updatedCount > 0) {
-        // Generate package index and update project file
+        // Generate package index and optionally update project file
         spinner.text = 'Updating package index...';
         await this.packageDownloader.generatePackageIndex();
-        await this.packageDownloader.updateProjectFile(this.projectManager);
+        
+        // Only update project file if user has one and hasn't disabled it
+        await this.updateProjectFileIfNeeded(spinner);
       }
 
       spinner.succeed(`Successfully updated ${updatedCount} package(s)!`);

@@ -44,7 +44,8 @@ Jelly uses a `jelly.json` file to manage project dependencies and configuration.
   "jelly": {
     "cleanup": true,
     "optimize": true,
-    "packagesPath": "Packages"
+    "packagesPath": "Packages",
+    "updateProjectFile": true
   }
 }
 ```
@@ -70,6 +71,25 @@ Jelly uses a `jelly.json` file to manage project dependencies and configuration.
 - **Type**: `string`
 - **Description**: A brief description of your project
 - **Example**: `"My awesome Roblox game"`
+
+#### `private` (optional)
+
+- **Type**: `boolean`
+- **Default**: `false`
+- **Description**: Marks the package as private, preventing it from being published to registries. Set to `true` to prevent accidental publishing of private packages.
+- **Example**: `"private": true`
+
+#### `license` (optional)
+
+- **Type**: `string`
+- **Description**: The license under which your package is published
+- **Example**: `"MIT"`
+
+#### `authors` (optional)
+
+- **Type**: `string[]`
+- **Description**: List of package authors
+- **Example**: `["John Doe <john@example.com>"]`
 
 ### Dependencies
 
@@ -213,6 +233,13 @@ Jelly uses a `jelly.json` file to manage project dependencies and configuration.
 - **Default**: `"Packages"`
 - **Description**: Path where packages should be installed
 - **Example**: `"packagesPath": "Dependencies"`
+
+##### `jelly.updateProjectFile`
+
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Whether to automatically update Rojo project files (default.project.json) to include the Packages directory. Set to `false` if you don't use Rojo or manage your project structure manually.
+- **Example**: `"updateProjectFile": false`
 
 ## Project Structure
 
@@ -422,4 +449,49 @@ Define common development tasks in scripts:
     "clean": "jelly clean"
   }
 }
+```
+
+## Publishing Guidelines
+
+When publishing packages to the Wally registry, Jelly enforces several guidelines to ensure package quality and compatibility.
+
+### Package Size Limit
+
+Packages must not exceed **2MB** in total size (compressed). This follows Wally's guidelines and ensures fast downloads. If your package exceeds this limit:
+
+- Use the `exclude` field to remove unnecessary files
+- Remove large assets or documentation that can be hosted separately
+- Consider splitting large packages into smaller, focused packages
+
+### Private Packages
+
+Packages marked as `private: true` cannot be published. This prevents accidental publishing of internal or development packages:
+
+```json
+{
+  "name": "my-company/internal-tools",
+  "private": true,
+  "dependencies": {}
+}
+```
+
+### Required Fields for Publishing
+
+The following fields are required when publishing:
+
+- `name`: Must be in `scope/name` format
+- `version`: Must follow semantic versioning (e.g., `1.0.0`)
+- `src/`: Directory must exist and contain your package code
+
+### Publishing Commands
+
+```bash
+# Publish your package
+jelly publish
+
+# Test publishing without actually publishing
+jelly publish --dry-run
+
+# Create a package archive locally
+jelly package
 ```

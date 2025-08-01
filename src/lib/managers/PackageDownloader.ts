@@ -40,12 +40,12 @@ export class PackageDownloader {
   }
 
   async downloadPackage(scope: string, name: string, version: string): Promise<void> {
-    const downloadUrl = `https://api.wally.run/v1/package-contents/${scope}/${name}/${version}`;
+    // Load config to get registry and packages path
+    await this.loadConfig();
+    
+    const downloadUrl = WallyAPI.getDownloadUrl(scope, name, version, this.config?.registry);
     
     try {
-      // Load config to get packages path and optimization settings
-      await this.loadConfig();
-      
       // Use the standard package directory
       const packageDir = path.join(this.packagesDir, `${scope}_${name}`);
       
@@ -120,18 +120,21 @@ export class PackageDownloader {
    * Returns the path to the extracted package
    */
   async downloadToTemp(scope: string, name: string, version: string, tempDir: string): Promise<string> {
+    // Load config to get registry information
+    await this.loadConfig();
+    
     // Resolve version if it's "latest"
     let resolvedVersion = version;
     if (version === 'latest') {
       const { WallyAPI } = await import('./WallyAPI');
-      resolvedVersion = await WallyAPI.getLatestVersion(scope, name);
+      resolvedVersion = await WallyAPI.getLatestVersion(scope, name, this.config?.registry);
     }
 
     // Generate unique temp directory for this package
     const tempPackageDir = path.join(tempDir, `${scope}_${name}_${Date.now()}`);
     
-    // Download URL
-    const downloadUrl = `https://api.wally.run/v1/package-contents/${scope}/${name}/${resolvedVersion}`;
+    // Download URL using registry-aware method
+    const downloadUrl = WallyAPI.getDownloadUrl(scope, name, resolvedVersion, this.config?.registry);
     
     // Download and extract (skip processing for temp downloads)
     await this.downloadAndExtract(scope, name, resolvedVersion, downloadUrl, tempPackageDir, true);
@@ -447,19 +450,37 @@ export class PackageDownloader {
   }
 
   async updateProjectFile(projectManager: any): Promise<void> {
-    // Update the Rojo project file to include the Packages directory
-    const project = await projectManager.readProject();
-    
-    if (!project.tree.ReplicatedStorage) {
-      project.tree.ReplicatedStorage = {};
+    try {
+      // Check if project file exists
+      if (!(await projectManager.projectExists())) {
+        // Don't throw an error - user might not be using Rojo or might have a different setup
+        return;
+      }
+
+      // Update the Rojo project file to include the Packages directory
+      const project = await projectManager.readProject();
+      
+      if (!project.tree.ReplicatedStorage) {
+        project.tree.ReplicatedStorage = { $className: "ReplicatedStorage" };
+      }
+
+      // Get the packages path from config
+      await this.loadConfig();
+      const packagesPath = this.config?.jelly?.packagesPath || 'Packages';
+
+      // Add Packages to ReplicatedStorage so they're accessible from both client and server
+      // Only update if it's not already set to avoid overwriting user configuration
+      if (!project.tree.ReplicatedStorage.Packages) {
+        project.tree.ReplicatedStorage.Packages = {
+          "$path": packagesPath
+        };
+
+        await projectManager.writeProject(project);
+      }
+    } catch (error) {
+      // Re-throw so the caller can handle appropriately
+      throw new Error(`Failed to update project file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    // Add Packages to ReplicatedStorage so they're accessible from both client and server
-    project.tree.ReplicatedStorage.Packages = {
-      "$path": "Packages"
-    };
-
-    await projectManager.writeProject(project);
   }
 
   async getPackagesPath(): Promise<string> {
@@ -468,7 +489,7 @@ export class PackageDownloader {
   }
 
   /**
-   * Extract version from package directory name (e.g., "roblox_roact@1.4.4" -> "1.4.4")
+   * Extract version from package directory name (e.g., "roblox/roact@1.4.4" -> "1.4.4")
    */
   private async extractVersionFromPackageDir(packageDir: string): Promise<string | undefined> {
     // Check if the package directory has a version suffix

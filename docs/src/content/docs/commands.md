@@ -246,6 +246,50 @@ jelly runtimes
 - Unavailable runtimes that could be installed
 - Status of each runtime (available/not available)
 
+### `jelly convert-wally`
+
+Convert a wally.toml file to jelly.json format.
+
+**Options:**
+
+- `-i, --input <file>`: Input wally.toml file (default: wally.toml)
+- `-o, --output <file>`: Output jelly.json file (default: jelly.json)
+
+**Examples:**
+
+```bash
+# Convert wally.toml to jelly.json (default files)
+jelly convert-wally
+
+# Convert specific files
+jelly convert-wally -i my-wally.toml -o my-jelly.json
+
+# Convert with custom output location
+jelly convert-wally -o config/jelly.json
+```
+
+### `jelly convert-jelly`
+
+Convert a jelly.json file to wally.toml format.
+
+**Options:**
+
+- `-i, --input <file>`: Input jelly.json file (default: jelly.json)
+- `-o, --output <file>`: Output wally.toml file (default: wally.toml)
+
+**Examples:**
+
+```bash
+# Convert jelly.json to wally.toml (default files)
+jelly convert-jelly
+
+# Convert specific files
+jelly convert-jelly -i my-jelly.json -o my-wally.toml
+
+# Convert with custom input location
+jelly convert-jelly -i config/jelly.json
+```
+
 ## Lockfile Commands
 
 ### `jelly lockfile [options]`

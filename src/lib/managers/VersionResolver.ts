@@ -19,13 +19,13 @@ export interface DependencyConflict {
 export class VersionResolver {
   private packageCache = new Map<string, WallyPackageInfo>();
 
-  async resolveVersion(scope: string, name: string, versionRange: string): Promise<ResolvedVersion> {
+  async resolveVersion(scope: string, name: string, versionRange: string, registry?: string): Promise<ResolvedVersion> {
     const packageName = `${scope}/${name}`;
     
     // Get package info (with caching)
     let packageInfo = this.packageCache.get(packageName);
     if (!packageInfo) {
-      packageInfo = await WallyAPI.getPackageInfo(scope, name);
+      packageInfo = await WallyAPI.getPackageInfo(scope, name, registry);
       this.packageCache.set(packageName, packageInfo);
     }
 

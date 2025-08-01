@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { JellyManager } from '../lib/managers/JellyManager';
 import { AuthManager } from '../lib/managers/AuthManager';
 import { PublishManager } from '../lib/managers/PublishManager';
+import { RuntimeManager } from '../lib/managers/RuntimeManager';
 import { InstallOptions, InitOptions, PublishOptions } from '../types';
 import { version } from '../../package.json';
 import { Output } from '../lib/utils/Output';
@@ -390,6 +391,50 @@ program
       await publishManager.manifestToJson();
     } catch (error) {
       Output.error('Manifest conversion failed', (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('exec <package>')
+  .alias('x')
+  .description('Execute a binary package (checks local first, then downloads if needed)')
+  .option('-y, --yes', 'skip confirmation prompt for remote packages')
+  .allowUnknownOption()
+  .action(async (packageName: string, options) => {
+    const runtimeManager = new RuntimeManager();
+    try {
+      // Get any additional args passed to the package
+      const args = process.argv.slice(process.argv.indexOf(packageName) + 1);
+      await runtimeManager.executePackageAuto(packageName, args, options.yes);
+    } catch (error) {
+      Output.error('Failed to execute package', (error as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('runtimes')
+  .description('List available runtimes for binary packages')
+  .action(async () => {
+    const runtimeManager = new RuntimeManager();
+    try {
+      Output.action('Checking available runtimes...');
+      const available = await runtimeManager.listAvailableRuntimes();
+      
+      if (available.length > 0) {
+        Output.newLine();
+        Output.success(`Found ${available.length} available runtime(s)`);
+        Output.section('Available Runtimes');
+        available.forEach(runtime => {
+          Output.listItem(runtime);
+        });
+      } else {
+        Output.warning('No common runtimes found');
+        Output.info('Consider installing: lune, luau, node, python, or deno');
+      }
+    } catch (error) {
+      Output.error('Failed to check runtimes', (error as Error).message);
       process.exit(1);
     }
   });

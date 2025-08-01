@@ -32,3 +32,5 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+.jelly/

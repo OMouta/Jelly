@@ -46,34 +46,14 @@ export class PackageDownloader {
       // Load config to get packages path and optimization settings
       await this.loadConfig();
       
-      // Create packages directory structure
-      await fs.ensureDir(this.packagesDir);
-      
+      // Use the standard package directory
       const packageDir = path.join(this.packagesDir, `${scope}_${name}`);
-      await fs.ensureDir(packageDir);
-
-      // Download the package ZIP
-      const response = await fetch(downloadUrl, {
-        headers: DOWNLOAD_HEADERS
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to download package: ${response.status} ${response.statusText}`);
-      }
-
-      const zipPath = path.join(packageDir, `${name}.zip`);
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      await fs.writeFile(zipPath, buffer);
-
-      // Extract the ZIP file
-      await this.extractPackage(zipPath, packageDir);
+      
+      // Download and extract to the package directory
+      await this.downloadAndExtract(scope, name, version, downloadUrl, packageDir);
       
       // Process the extracted package (clean up and find main module)
       await this.processExtractedPackage(packageDir, scope, name);
-      
-      // Clean up the ZIP file
-      await fs.remove(zipPath);
 
       console.log(`\n🪼 Downloaded and extracted ${scope}/${name}@${version}`);
     } catch (error) {
@@ -86,39 +66,77 @@ export class PackageDownloader {
       // Load config to get packages path and optimization settings
       await this.loadConfig();
       
-      // Create packages directory structure
-      await fs.ensureDir(this.packagesDir);
-      
+      // Use the standard package directory
       const packageDir = path.join(this.packagesDir, `${scope}_${name}`);
-      await fs.ensureDir(packageDir);
-
-      // Download the package ZIP from the resolved URL
-      const response = await fetch(lockfileEntry.resolved, {
-        headers: DOWNLOAD_HEADERS
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to download package: ${response.status} ${response.statusText}`);
-      }
-
-      const zipPath = path.join(packageDir, `${name}.zip`);
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      await fs.writeFile(zipPath, buffer);
-
-      // Extract the ZIP file
-      await this.extractPackage(zipPath, packageDir);
+      
+      // Download and extract using lockfile URL
+      await this.downloadAndExtract(scope, name, lockfileEntry.version, lockfileEntry.resolved, packageDir);
       
       // Process the extracted package (clean up and find main module)
       await this.processExtractedPackage(packageDir, scope, name);
-      
-      // Clean up the ZIP file
-      await fs.remove(zipPath);
 
       console.log(`\n🪼 Downloaded and extracted ${scope}/${name}@${lockfileEntry.version} (from lockfile)`);
     } catch (error) {
       throw new Error(`Failed to download ${scope}/${name}@${lockfileEntry.version}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Download and extract a package to a specific directory
+   * This is a modular method that can be used by both regular package installation and runtime execution
+   */
+  async downloadAndExtract(scope: string, name: string, version: string, downloadUrl: string, targetDir: string, skipProcessing: boolean = false): Promise<void> {
+    // Create target directory structure
+    await fs.ensureDir(targetDir);
+
+    // Download the package ZIP
+    const response = await fetch(downloadUrl, {
+      headers: DOWNLOAD_HEADERS
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to download package: ${response.status} ${response.statusText}`);
+    }
+
+    const zipPath = path.join(targetDir, `${name}.zip`);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    await fs.writeFile(zipPath, buffer);
+
+    // Extract the ZIP file
+    await this.extractPackage(zipPath, targetDir);
+    
+    // Clean up the ZIP file
+    await fs.remove(zipPath);
+
+    // Optionally skip processing (useful for runtime execution where we don't want optimization/cleanup)
+    if (!skipProcessing) {
+      await this.processExtractedPackage(targetDir, scope, name);
+    }
+  }
+
+  /**
+   * Download a package to a temporary directory (useful for runtime execution)
+   * Returns the path to the extracted package
+   */
+  async downloadToTemp(scope: string, name: string, version: string, tempDir: string): Promise<string> {
+    // Resolve version if it's "latest"
+    let resolvedVersion = version;
+    if (version === 'latest') {
+      const { WallyAPI } = await import('./WallyAPI');
+      resolvedVersion = await WallyAPI.getLatestVersion(scope, name);
+    }
+
+    // Generate unique temp directory for this package
+    const tempPackageDir = path.join(tempDir, `${scope}_${name}_${Date.now()}`);
+    
+    // Download URL
+    const downloadUrl = `https://api.wally.run/v1/package-contents/${scope}/${name}/${resolvedVersion}`;
+    
+    // Download and extract (skip processing for temp downloads)
+    await this.downloadAndExtract(scope, name, resolvedVersion, downloadUrl, tempPackageDir, true);
+    
+    return tempPackageDir;
   }
 
   private async extractPackage(zipPath: string, extractDir: string): Promise<void> {

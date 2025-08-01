@@ -8,6 +8,12 @@ export interface RojoProject {
   };
 }
 
+export interface BinaryPackageTarget {
+  environment: string; // e.g., "lune", "luau", "python", "node", etc.
+  bin: string; // Entry point file, e.g., "main.luau", "cli.py", "index.js"
+  args?: string[]; // Optional default arguments
+}
+
 export interface JellyConfig {
   name: string;
   version: string;
@@ -25,6 +31,7 @@ export interface JellyConfig {
   devDependencies: Record<string, string>;
   serverDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
+  target?: BinaryPackageTarget; // Binary package configuration
   jelly?: {
     cleanup?: boolean;
     optimize?: boolean;

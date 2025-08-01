@@ -126,6 +126,66 @@ Jelly uses a `jelly.json` file to manage project dependencies and configuration.
 }
 ```
 
+### Binary Package Target
+
+#### `target`
+
+- **Type**: `object`
+- **Description**: Configuration for binary packages that can be executed with `jelly exec`
+- **Required for binary packages**: Yes
+
+##### `target.environment`
+
+- **Type**: `string`
+- **Description**: The runtime environment to use for executing the package
+- **Supported values**: `"lune"`, `"luau"`, `"lua"`, `"node"`, `"python"`, `"deno"`
+
+##### `target.bin`
+
+- **Type**: `string`
+- **Description**: Path to the main executable file relative to the package root
+- **Example**: `"main.luau"`, `"cli.py"`, `"index.js"`
+
+##### `target.args` (optional)
+
+- **Type**: `string[]`
+- **Description**: Default arguments to pass to the binary when executed
+
+**Example:**
+
+```json
+{
+  "name": "my-cli-tool",
+  "version": "1.0.0",
+  "target": {
+    "environment": "lune",
+    "bin": "src/main.luau",
+    "args": ["--default-config"]
+  },
+  "dependencies": {}
+}
+```
+
+**Complete Binary Package Example:**
+
+```json
+{
+  "name": "code-formatter",
+  "version": "2.1.0",
+  "description": "A Luau code formatter tool",
+  "target": {
+    "environment": "lune",
+    "bin": "cli/format.luau"
+  },
+  "scripts": {
+    "test": "lune run tests/runner.luau"
+  },
+  "dependencies": {
+    "lune-org/luau-ast": "^0.7.0"
+  }
+}
+```
+
 ### Jelly-Specific Configuration
 
 #### `jelly`

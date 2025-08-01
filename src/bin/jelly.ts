@@ -10,10 +10,8 @@ import { Output } from '../lib/utils/Output';
 
 const program = new Command();
 
-// Custom help formatter using our professional output system
 program.configureHelp({
   formatHelp: (cmd, helper) => {
-    // Use our branded header
     Output.jellyHeader();
     
     // Usage

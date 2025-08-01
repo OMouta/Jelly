@@ -1,4 +1,4 @@
-import { WallyAPI } from '../src/lib/WallyAPI';
+import { WallyAPI } from '../src/lib/managers/WallyAPI';
 
 describe('WallyAPI', () => {
   describe('parsePackageName', () => {

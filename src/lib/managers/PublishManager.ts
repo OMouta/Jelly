@@ -7,6 +7,7 @@ import { minimatch } from 'minimatch';
 import { AuthManager } from './AuthManager';
 import { ProjectManager } from './ProjectManager';
 import { PublishOptions, WallyManifest, JellyConfig } from '../../types';
+import { fetch } from '../utils/fetch';
 
 export class PublishManager {
   private projectManager: ProjectManager;

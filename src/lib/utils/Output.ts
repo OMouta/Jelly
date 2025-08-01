@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import figlet from 'figlet';
 
-// Brand colors inspired by professional CLIs
 const colors = {
   primary: '#2563eb',      // Blue-500
   secondary: '#111827',    // Indigo-500
@@ -14,7 +13,6 @@ const colors = {
   dim: '#9CA3AF',          // Gray-400
 };
 
-// Icons for better visual hierarchy
 const icons = {
   success: '✨',
   error: '💥',
@@ -105,7 +103,6 @@ export class Output {
     }
   }
 
-  // Action messages with jellyfish icon
   static action(message: string): void {
     console.log(chalk.hex(colors.primary)(`${icons.jelly} ${message}`));
   }

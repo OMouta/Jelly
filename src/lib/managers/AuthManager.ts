@@ -5,6 +5,7 @@ import ora from 'ora';
 import { HTTP_HEADERS } from './WallyAPI';
 import { DeviceCodeResponse, AccessTokenResponse, RegistryTokenStore, RegistryConfig, AuthTokenStore } from '../../types';
 import { Output } from '../utils/Output';
+import { fetch } from '../utils/fetch';
 
 export class AuthManager {
   private static readonly DEFAULT_REGISTRY = 'https://github.com/UpliftGames/wally-index';

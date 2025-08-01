@@ -1,15 +1,16 @@
 import { WallySearchResult, WallyPackageInfo, WallyPackage } from '../../types';
+import { fetch } from '../utils/fetch';
 
 // Common HTTP headers for Jelly requests
 export const HTTP_HEADERS = {
-  'User-Agent': 'jelly-cli/0.3.0',
+  'User-Agent': 'jelly-cli/0.3.3',
   'Accept': 'application/json',
   'Content-Type': 'application/json'
 } as const;
 
 // Headers for package downloads
 export const DOWNLOAD_HEADERS = {
-  'User-Agent': 'jelly-cli/0.3.0',
+  'User-Agent': 'jelly-cli/0.3.3',
   'Accept': 'application/zip',
   'Wally-Version': '0.3.2'
 } as const;

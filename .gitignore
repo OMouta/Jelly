@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+binaries/
 *.tsbuildinfo
 
 # Environment
@@ -31,18 +32,3 @@ pids
 *.pid
 *.seed
 *.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Demo projects (for testing)
-demo-project/
-test-projects/
-JellyTestRex/
-
-# Lockfiles (uncomment to exclude from version control)
-# jelly-lock.json

@@ -193,60 +193,6 @@ jelly run build --output game.rbxl
 jelly run serve
 ```
 
-## Workspace Commands
-
-### `jelly workspace [command]`
-
-Manage workspaces for monorepo development.
-
-**Subcommands:**
-
-- `init`: Initialize workspace root
-- `create <path>`: Create new workspace package  
-- `list`: List all workspaces
-- `install`: Install dependencies for all workspaces
-- `add <workspace> <packages...>`: Add packages to specific workspace
-- `run <script>`: Run script in all workspaces
-
-**Options:**
-
-- `--parallel`: Run operations in parallel
-- `--filter <patterns...>`: Filter workspaces by name/path
-- `--exclude <patterns...>`: Exclude workspaces by name/path
-
-**Examples:**
-
-```bash
-# Initialize a workspace root
-jelly workspace init
-
-# Create workspace packages
-jelly workspace create packages/shared-ui --name shared-ui
-jelly workspace create packages/game-logic --name game-logic
-
-# List all workspaces
-jelly workspace list
-
-# Install dependencies for all workspaces
-jelly workspace install
-
-# Install dependencies in parallel (faster)
-jelly workspace install --parallel
-
-# Add packages to specific workspace
-jelly workspace add shared-ui roblox/roact roblox/rodux
-
-# Run scripts across all workspaces
-jelly workspace run build
-
-# Run scripts with filters
-jelly workspace run test --filter packages
-jelly workspace run build --exclude apps
-
-# Run scripts in parallel
-jelly workspace run build --parallel
-```
-
 ## Lockfile Commands
 
 ### `jelly lockfile [options]`

@@ -1,6 +1,7 @@
 # Jelly 🪼
 
-> ⚠️ **Beta Release**: Jelly is currently in beta (v0.3). While functional, expect some rough edges and breaking changes. Feedback and contributions welcome!
+> [!WARNING]  
+> Jelly is no longer mantained, check out [stackfox-labs/luumen](https://github.com/stackfox-labs/luumen) for a better way to control your roblox stack!
 
 A modern package manager for Roblox, built on top of Wally. Jelly provides a streamlined, npm-like experience with intelligent package optimization and a clean JSON configuration format.
 
